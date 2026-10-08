@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KSP Web – Launcher</title>
+<style>
+  :root {
+    --bg: #0b0f17; --panel: #131a27; --line: #223049; --text: #e6edf7; --muted: #93a4bd; --accent: #7cf0a4;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0; font-size: 16px; }
+  header nav { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; }
+  a { color: var(--accent); }
+  main { position: relative; flex: 1; min-height: 0; }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+  #fallback { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; padding: 16px; }
+  #fallback.show { display: flex; }
+  .card { max-width: 560px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px 24px; }
+  .card h2 { margin: 0 0 8px; font-size: 18px; }
+  .card p { margin: 8px 0; color: var(--muted); }
+  .card ul { padding-left: 20px; color: var(--muted); }
+  .btn { display: inline-block; margin: 6px 8px 0 0; padding: 8px 14px; border-radius: 8px; text-decoration: none;
+    background: var(--accent); color: #05210f; font-weight: 600; }
+  .btn.alt { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .note { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Kerbal Space Program · Web</h1>
+  <nav>
+    <a href="https://ksp.ishotupa.school" target="_blank" rel="noopener">Open in new tab</a>
+    <a href="https://cloud.ishotupa.school/ksp.zip">Offline zip</a>
+    <a href="https://github.com/woahhcrackers/kspweb" target="_blank" rel="noopener">Source (KSPWeb)</a>
+  </nav>
+</header>
+
+<main>
+  <iframe id="game" src="https://ksp.ishotupa.school" title="Kerbal Space Program in the browser"
+          allow="fullscreen; gamepad" referrerpolicy="no-referrer-when-downgrade"></iframe>
+
+  <div id="fallback">
+    <div class="card">
+      <h2>The game didn't load here</h2>
+      <p>The page may block embedding, or your network may be blocking it. You can still play it directly:</p>
+      <a class="btn" href="https://ksp.ishotupa.school" target="_blank" rel="noopener">Play in a new tab</a>
+      <a class="btn alt" href="https://cloud.ishotupa.school/ksp.zip">Download offline zip</a>
+      <p class="note">KSPWeb is a fan port of Kerbal Space Program 1 by woahhcrackers. It is a big, memory-hungry page
+        (around 3 GB of RAM), so close other tabs first. Kerbal Space Program belongs to Squad and Take-Two; this is a
+        fan project.</p>
+      <p class="note">Offline: unzip the download and serve it with any static server, for example <code>npx serve</code>.</p>
+    </div>
+  </div>
+</main>
+
+<script>
+  // If the embed never loads (blocked by X-Frame-Options or CSP, or a network error), show the fallback card.
+  const frame = document.getElementById('game');
+  const fallback = document.getElementById('fallback');
+  const timer = setTimeout(() => fallback.classList.add('show'), 20000);
+  frame.addEventListener('load', () => {
+    clearTimeout(timer);
+    // Blocked embeds still fire "load" with an error page, which we can't read cross-origin. Keep the card hidden
+    // and rely on the explicit links above.
+  });
+  frame.addEventListener('error', () => fallback.classList.add('show'));
+</script>
+</body>
+</html>

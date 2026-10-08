@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kerbal Space Program – Web</title>
+<style>
+  :root {
+    --bg: #05070d; --panel: rgba(10, 16, 28, .86); --line: #22304a;
+    --text: #dfe8f5; --muted: #8aa0bd; --accent: #7cf0a4; --warn: #ffb347; --bad: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  #hud { top: 12px; left: 12px; width: 270px; }
+  #hud h1 { margin: 0 0 6px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  #status { font-size: 18px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+  #status[data-s="READY"], #status[data-s="LANDED"] { color: var(--muted); }
+  #status[data-s="ORBIT"] { color: var(--accent); }
+  #status[data-s="ESCAPE"] { color: var(--warn); }
+  #status[data-s="CRASHED"] { color: var(--bad); }
+  .row { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+  .row > span:first-child { color: var(--muted); }
+  .bar { height: 6px; margin: 4px 0 6px; background: #17223a; border-radius: 3px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); }
+  #fuelBar { background: var(--warn); }
+  #log { top: 12px; right: 12px; width: 300px; font-size: 13px; color: var(--muted); }
+  #log div { padding: 2px 0; }
+  #log div:first-child { color: var(--text); }
+  #help { bottom: 12px; left: 12px; right: 12px; font-size: 13px; color: var(--muted); }
+  #help p { margin: 4px 0; }
+  kbd { font: 12px ui-monospace, Menlo, Consolas, monospace; background: #17223a; border: 1px solid var(--line);
+    border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--text); }
+  @media (max-width: 720px) {
+    #hud { width: auto; right: 12px; max-height: 50vh; overflow: auto; }
+    #log { display: none; }
+    #help { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div id="hud" class="panel">
+  <h1>Kerbal Space Program · Web</h1>
+  <div id="status" data-s="READY">READY</div>
+  <div class="row"><span>Mission time</span><span id="met">00:00:00</span></div>
+  <div class="row"><span>Altitude</span><span id="alt">0 m</span></div>
+  <div class="row"><span>Speed</span><span id="spd">0 m/s</span></div>
+  <div class="row"><span>Vertical speed</span><span id="vs">0 m/s</span></div>
+  <div class="row"><span>Apoapsis</span><span id="ap">—</span></div>
+  <div class="row"><span>Periapsis</span><span id="pe">—</span></div>
+  <div class="row"><span>Pitch from vertical</span><span id="pitch">0°</span></div>
+  <div class="row"><span>Throttle</span><span id="thr">0%</span></div>
+  <div class="bar"><i id="thrBar"></i></div>
+  <div class="row"><span>Stage</span><span id="stage">1 / 2</span></div>
+  <div class="row"><span>Stage fuel</span><span id="fuel">100%</span></div>
+  <div class="bar"><i id="fuelBar"></i></div>
+  <div class="row"><span>ΔV remaining</span><span id="dv">0 m/s</span></div>
+  <div class="row"><span>SAS</span><span id="sas">OFF</span></div>
+  <div class="row"><span>Time warp</span><span id="warp">1×</span></div>
+</div>
+
+<div id="log" class="panel"></div>
+
+<div id="help" class="panel">
+  <p><kbd>Space</kbd> ignite / stage · <kbd>W</kbd> <kbd>S</kbd> throttle · <kbd>Z</kbd> full · <kbd>X</kbd> cut ·
+     <kbd>A</kbd> <kbd>D</kbd> pitch · <kbd>P</kbd> hold prograde · <kbd>T</kbd> time warp · <kbd>R</kbd> reset</p>
+  <p>Tip: climb, pitch over to roughly 45° within a few km, press <kbd>P</kbd> and let the gravity turn carry you.
+     Drop the booster with <kbd>Space</kbd> when it runs dry. Periapsis above 70 km means a stable orbit.</p>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // Kerbin-like constants (SI units). Simplified 2D model, not the real game's physics.
+  const R = 600000;            // planet radius (m)
+  const GM = 3.5316e12;        // gravitational parameter (m^3/s^2)
+  const G0 = 9.80665;          // standard gravity, used for specific impulse
+  const ATMO = 70000;          // atmosphere top (m)
+  const SCALE_H = 5000;        // atmosphere scale height (m)
+  const RHO0 = 1.225;          // sea-level air density (kg/m^3)
+  const CDA = 0.5;             // drag coefficient × area (m^2)
+  const DT = 1 / 120;          // fixed physics step (s)
+  const WARP = [1, 2, 4, 8];
+  const TRAIL_STEP = 400;      // metres between stored trail points
+  const TRAIL_MAX = 6000;
+
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+  const ui = Object.fromEntries(
+    ['status', 'met', 'alt', 'spd', 'vs', 'ap', 'pe', 'pitch', 'thr', 'thrBar', 'stage',
+     'fuel', 'fuelBar', 'dv', 'sas', 'warp', 'log']
+      .map(id => [id, document.getElementById(id)]));
+
+  const stars = Array.from({ length: 220 }, () => ({ x: Math.random(), y: Math.random(), r: 0.5 + Math.random() * 1.2 }));
+  const keys = new Set();
+  const view = { span: 200 };  // metres visible across the screen height
+  let s, warpIdx = 0, acc = 0, lastNow = performance.now(), messages = [];
+
+  const freshStages = () => [
+    { name: 'Booster', len: 12, wid: 2.5, dry: 4000, fuel: 36000, maxFuel: 36000, thrust: 600000, isp: 280 },
+    { name: 'Upper',   len: 6,  wid: 2,   dry: 1000, fuel: 7000,  maxFuel: 7000,  thrust: 150000, isp: 340 },
+  ];
+
+  // ---------- helpers ----------
+  const pad = n => String(n).padStart(2, '0');
+  const clock = t => `${pad(Math.floor(t / 3600))}:${pad(Math.floor(t % 3600 / 60))}:${pad(Math.floor(t % 60))}`;
+  const fmtDist = m => Math.abs(m) >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m.toFixed(0)} m`;
+  const mass = st => st.stages.reduce((m, g) => m + g.dry + g.fuel, 0);
+
+  function say(msg) {
+    messages.unshift(`T+${clock(s ? s.t : 0)}  ${msg}`);
+    messages = messages.slice(0, 6);
+    ui.log.replaceChildren(...messages.map(text => {
+      const d = document.createElement('div');
+      d.textContent = text;
+      return d;
+    }));
+  }
+
+  function reset() {
+    s = { px: 0, py: R, vx: 0, vy: 0, hdg: Math.PI / 2, throttle: 0, t: 0,
+          stages: freshStages(), stageTotal: 2, launched: false, onGround: true, over: false,
+          sas: false, status: 'READY', trail: [], debris: [] };
+    view.span = 200;
+    messages = [];
+    say('Vehicle on the launch pad. Press Space to ignite.');
+  }
+
+  function ignite() {
+    s.launched = true;
+    s.throttle = 1;
+    say('Ignition! Main engine at full throttle.');
+  }
+
+  function stage() {
+    if (s.over) return;
+    if (!s.launched) return ignite();
+    if (s.stages.length < 2) return say('No stages left to drop.');
+    const spent = s.stages.shift();
+    const r = Math.hypot(s.px, s.py), ux = s.px / r, uy = s.py / r;
+    s.debris.push({
+      x: s.px - ux * 6, y: s.py - uy * 6,
+      vx: s.vx - ux * 2, vy: s.vy - uy * 2,
+      rot: Math.PI / 2 - s.hdg, spin: (Math.random() - 0.5) * 2,
+      len: spent.len, wid: spent.wid,
+    });
+    say(`Stage separation: ${spent.name} dropped.`);
+  }
+
+  function crash(impact) {
+    s.over = true;
+    s.throttle = 0;
+    s.status = 'CRASHED';
+    say(`Crashed: ${impact.toFixed(1)} m/s impact. Press R to try again.`);
+  }
+
+  // Orbit elements from the current state vector (two-body, no drag).
+  function orbitOf(st) {
+    const r = Math.hypot(st.px, st.py);
+    const eps = (st.vx * st.vx + st.vy * st.vy) / 2 - GM / r;   // specific orbital energy
+    const h = st.px * st.vy - st.py * st.vx;                     // specific angular momentum
+    const e = Math.sqrt(Math.max(0, 1 + 2 * eps * h * h / (GM * GM)));
+    if (eps >= 0) return { escape: true, ap: Infinity, pe: h * h / (GM * (1 + e)) - R };
+    const a = -GM / (2 * eps);
+    return { escape: false, ap: a * (1 + e) - R, pe: a * (1 - e) - R };
+  }
+
+  function deltaV(st) {
+    return st.stages.reduce((dv, g, i) => {
+      if (g.fuel <= 0) return dv;
+      const above = st.stages.slice(i + 1).reduce((m, x) => m + x.dry + x.fuel, 0);
+      return dv + g.isp * G0 * Math.log((g.dry + g.fuel + above) / (g.dry + above));
+    }, 0);
+  }
+
+  // Coast ahead on pure gravity, for the orange prediction line. Stops after one full loop or at the surface.
+  function predict(st) {
+    const pts = [];
+    let x = st.px, y = st.py, vx = st.vx, vy = st.vy;
+    const h = 2;
+    let prev = Math.atan2(y, x), sweep = 0;
+    for (let i = 0; i < 3000; i++) {
+      const r = Math.hypot(x, y);
+      if (r < R) break;
+      const g = -GM / (r * r * r);
+      vx += g * x * h; vy += g * y * h;
+      x += vx * h; y += vy * h;
+      const ang = Math.atan2(y, x);
+      sweep += Math.atan2(Math.sin(ang - prev), Math.cos(ang - prev));
+      prev = ang;
+      if (Math.abs(sweep) > 2 * Math.PI) break;
+      if (i % 4 === 0) pts.push({ x, y });
+    }
+    return pts;
+  }
+
+  // ---------- simulation ----------
+  function step(dt) {
+    const st = s;
+    if (st.over) return;
+
+    const r0 = Math.hypot(st.px, st.py);
+    if (st.sas && st.launched) {
+      const speed = Math.hypot(st.vx, st.vy);
+      st.hdg = speed > 5 ? Math.atan2(st.vy, st.vx) : Math.atan2(st.py, st.px);
+    }
+
+    const m = mass(st);
+    const ux = st.px / r0, uy = st.py / r0;
+    const g = GM / (r0 * r0);
+    let ax = -g * ux, ay = -g * uy;
+
+    const eng = st.stages[0];
+    if (eng && st.launched && st.throttle > 0) {
+      if (eng.fuel > 0) {
+        const F = st.throttle * eng.thrust;
+        eng.fuel = Math.max(0, eng.fuel - (F / (eng.isp * G0)) * dt);
+        ax += (F / m) * Math.cos(st.hdg);
+        ay += (F / m) * Math.sin(st.hdg);
+      } else if (!eng.empty) {
+        eng.empty = true;
+        say('Flameout: stage out of fuel. Press Space to stage.');
+      }
+    }
+
+    const alt = r0 - R;
+    const v = Math.hypot(st.vx, st.vy);
+    if (alt < ATMO && v > 0) {
+      const rho = RHO0 * Math.exp(-Math.max(alt, 0) / SCALE_H);
+      const drag = 0.5 * rho * CDA * v / m;
+      ax -= drag * st.vx; ay -= drag * st.vy;
+    }
+
+    st.vx += ax * dt; st.vy += ay * dt;
+    st.px += st.vx * dt; st.py += st.vy * dt;
+
+    const r1 = Math.hypot(st.px, st.py);
+    st.onGround = r1 <= R;
+    if (st.onGround) {
+      const nx = st.px / r1, ny = st.py / r1;
+      const vr = st.vx * nx + st.vy * ny;
+      if (vr < 0) {
+        if (-vr > 8 && st.launched) return crash(-vr);
+        // Ground contact: kill the downward speed and skid with friction.
+        const tx = -ny, ty = nx;
+        const vt = st.vx * tx + st.vy * ty;
+        const f = Math.exp(-4 * dt);
+        st.vx = tx * vt * f; st.vy = ty * vt * f;
+      }
+      st.px = nx * R; st.py = ny * R;
+    }
+
+    for (const d of st.debris) {
+      const dr = Math.hypot(d.x, d.y), dg = GM / (dr * dr * dr);
+      d.vx -= dg * d.x * dt; d.vy -= dg * d.y * dt;
+      d.x += d.vx * dt; d.y += d.vy * dt;
+      d.rot += d.spin * dt;
+    }
+    st.debris = st.debris.filter(d => Math.hypot(d.x, d.y) > R);
+
+    st.t += dt;
+    const last = st.trail[st.trail.length - 1];
+    if (!last || Math.hypot(st.px - last.x, st.py - last.y) >= TRAIL_STEP) {
+      st.trail.push({ x: st.px, y: st.py });
+      if (st.trail.length > TRAIL_MAX) st.trail.shift();
+    }
+
+    updateStatus();
+  }
+
+  function updateStatus() {
+    const st = s;
+    if (st.over) return;
+    const o = orbitOf(st);
+    let status = 'FLIGHT';
+    if (!st.launched) status = 'READY';
+    else if (o.escape) status = 'ESCAPE';
+    else if (o.pe > ATMO) status = 'ORBIT';
+    else if (st.onGround && Math.hypot(st.vx, st.vy) < 1) status = 'LANDED';
+    if (status !== st.status) {
+      if (status === 'ORBIT') say('Stable orbit! Periapsis is above the atmosphere.');
+      if (status === 'ESCAPE') say('Escape trajectory: Kerbin is no longer holding you.');
+      st.status = status;
+    }
+  }
+
+  function handleKeys(dt) {
+    if (s.over) return;
+    if (keys.has('KeyW')) s.throttle = Math.min(1, s.throttle + 0.7 * dt);
+    if (keys.has('KeyS')) s.throttle = Math.max(0, s.throttle - 0.7 * dt);
+    const turn = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
+    if (turn) { s.hdg -= turn * 0.6 * dt; s.sas = false; }   // clockwise on screen = decreasing angle
+  }
+
+  // ---------- rendering ----------
+  function circle(x, y, r, fill) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = fill;
+    ctx.fill();
+  }
+
+  function strokePath(pts, style, dash = []) {
+    if (pts.length < 2) return;
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.setLineDash(dash);
+    ctx.strokeStyle = style;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawRocket(x, y, k) {
+    const st = s, eng = st.stages[0];
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.PI / 2 - st.hdg);            // nose points along the heading
+
+    let base = 0;                                 // stack built upward from y = 0 (engine end)
+    st.stages.forEach((g, i) => {
+      const w = g.wid * k, len = g.len * k;
+      ctx.fillStyle = i === 0 ? '#e0913c' : '#e9edf3';
+      ctx.fillRect(-w / 2, base - len, w, len);
+      base -= len;
+    });
+
+    const top = st.stages[st.stages.length - 1], tw = top.wid * k;
+    ctx.fillStyle = '#d9534f';
+    ctx.beginPath();
+    ctx.moveTo(-tw / 2, base);
+    ctx.lineTo(tw / 2, base);
+    ctx.lineTo(0, base - 3 * k);
+    ctx.fill();
+
+    const w0 = eng.wid * k;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(-w0 * 0.35, 0, w0 * 0.7, 1.5 * k);
+    if (st.launched && st.throttle > 0 && eng.fuel > 0 && !st.over) {
+      const len = (4 + 10 * st.throttle * (0.8 + 0.4 * Math.random())) * k;
+      const grad = ctx.createLinearGradient(0, 0, 0, len);
+      grad.addColorStop(0, '#fff6c2');
+      grad.addColorStop(0.35, '#ffb347');
+      grad.addColorStop(1, 'rgba(255,80,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(-w0 * 0.3, 1.5 * k);
+      ctx.lineTo(w0 * 0.3, 1.5 * k);
+      ctx.lineTo(0, 1.5 * k + len);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function draw() {
+    const dpr = window.devicePixelRatio || 1;
+    const W = innerWidth, H = innerHeight;
+    if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const ppm = H / view.span;                    // pixels per metre
+    const k = Math.max(ppm, 1.2);                 // keeps the rocket visible when zoomed far out
+    const X = x => W / 2 + (x - s.px) * ppm;
+    const Y = y => H / 2 - (y - s.py) * ppm;
+    const alt = Math.hypot(s.px, s.py) - R;
+    const air = Math.max(0, 1 - alt / ATMO);      // 1 at the ground, 0 in space
+
+    ctx.fillStyle = '#05070d';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff';
+    ctx.globalAlpha = 1 - air * 0.95;
+    for (const st of stars) ctx.fillRect(st.x * W, st.y * H, st.r, st.r);
+    ctx.globalAlpha = 1;
+
+    circle(X(0), Y(0), (R + ATMO) * ppm, `rgba(90,160,255,${0.12 + 0.3 * air})`);
+    circle(X(0), Y(0), R * ppm, '#2f6b3a');
+
+    const padW = Math.max(3, 30 * ppm), padH = Math.max(1.5, 2 * ppm);
+    ctx.fillStyle = '#9aa3ad';
+    ctx.fillRect(X(0) - padW / 2, Y(R) - padH, padW, padH);
+
+    strokePath(s.trail.map(p => [X(p.x), Y(p.y)]), 'rgba(124,240,164,.75)');
+    if (s.launched && !s.over) {
+      strokePath(predict(s).map(p => [X(p.x), Y(p.y)]), 'rgba(255,179,71,.85)', [6, 6]);
+    }
+
+    for (const d of s.debris) {
+      ctx.save();
+      ctx.translate(X(d.x), Y(d.y));
+      ctx.rotate(d.rot);
+      ctx.fillStyle = '#e0913c';
+      ctx.fillRect(-d.wid * k / 2, -d.len * k / 2, d.wid * k, d.len * k);
+      ctx.restore();
+    }
+
+    drawRocket(X(s.px), Y(s.py), k);
+  }
+
+  // ---------- HUD ----------
+  function updateView(dt) {
+    const alt = Math.hypot(s.px, s.py) - R;
+    const target = Math.min(4e6, 160 + alt * 2.5);
+    view.span *= Math.pow(target / view.span, Math.min(1, dt * 4));
+  }
+
+  function updateHUD() {
+    const st = s, r = Math.hypot(st.px, st.py);
+    const ux = st.px / r, uy = st.py / r;
+    const speed = Math.hypot(st.vx, st.vy);
+    const vs = st.vx * ux + st.vy * uy;
+    const o = orbitOf(st);
+    const eng = st.stages[0];
+    const d = st.hdg - Math.atan2(uy, ux);
+    const pitch = Math.atan2(Math.sin(d), Math.cos(d)) * 180 / Math.PI;
+    const inFlight = st.launched && !st.onGround;
+    const fuelFrac = eng ? eng.fuel / eng.maxFuel : 0;
+
+    ui.status.textContent = st.status;
+    ui.status.dataset.s = st.status;
+    ui.met.textContent = clock(st.t);
+    ui.alt.textContent = fmtDist(r - R);
+    ui.spd.textContent = `${speed.toFixed(0)} m/s`;
+    ui.vs.textContent = `${vs.toFixed(0)} m/s`;
+    ui.ap.textContent = !inFlight ? '—' : o.escape ? '∞' : fmtDist(o.ap);
+    ui.pe.textContent = !inFlight ? '—' : fmtDist(o.pe);
+    ui.pitch.textContent = `${pitch.toFixed(0)}°`;
+    ui.thr.textContent = `${Math.round(st.throttle * 100)}%`;
+    ui.thrBar.style.width = `${st.throttle * 100}%`;
+    ui.stage.textContent = `${st.stageTotal - st.stages.length + 1} / ${st.stageTotal}`;
+    ui.fuel.textContent = `${Math.round(fuelFrac * 100)}%`;
+    ui.fuelBar.style.width = `${fuelFrac * 100}%`;
+    ui.dv.textContent = `${deltaV(st).toFixed(0)} m/s`;
+    ui.sas.textContent = st.sas ? 'PROGRADE' : 'OFF';
+    ui.warp.textContent = `${WARP[warpIdx]}×`;
+  }
+
+  // ---------- input & loop ----------
+  addEventListener('keydown', e => {
+    if (['Space', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+    keys.add(e.code);
+    if (e.repeat) return;
+    switch (e.code) {
+      case 'Space': stage(); break;
+      case 'KeyZ': s.throttle = 1; break;
+      case 'KeyX': s.throttle = 0; break;
+      case 'KeyP': s.sas = !s.sas; say(`SAS ${s.sas ? 'holding prograde' : 'off'}.`); break;
+      case 'KeyT': warpIdx = (warpIdx + 1) % WARP.length; break;
+      case 'KeyR': reset(); break;
+    }
+  });
+  addEventListener('keyup', e => keys.delete(e.code));
+  addEventListener('blur', () => keys.clear());
+
+  function frame(now) {
+    const dt = Math.min(0.1, (now - lastNow) / 1000);
+    lastNow = now;
+    handleKeys(dt);
+    acc = Math.min(acc + dt * WARP[warpIdx], 0.25);
+    while (acc >= DT) { step(DT); acc -= DT; }
+    updateView(dt);
+    draw();
+    updateHUD();
+    requestAnimationFrame(frame);
+  }
+
+  reset();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
