@@ -206,8 +206,10 @@
 
     const r0 = Math.hypot(st.px, st.py);
     if (st.sas && st.launched) {
-      const speed = Math.hypot(st.vx, st.vy);
-      st.hdg = speed > 5 ? Math.atan2(st.vy, st.vx) : Math.atan2(st.py, st.px);
+      // Follow velocity only while climbing; when falling, prograde would thrust into the ground.
+      const ux0 = st.px / r0, uy0 = st.py / r0;
+      const climbing = st.vx * ux0 + st.vy * uy0 > 0;
+      if (climbing && Math.hypot(st.vx, st.vy) > 5) st.hdg = Math.atan2(st.vy, st.vx);
     }
 
     const m = mass(st);
