@@ -1,0 +1,797 @@
+<title>AP Stats Unit 3 Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: graph-paper ground; each test question is a sheet with notes beside a live practice problem. */
+:root {
+  --paper: #f4f7fb;
+  --grid: #e2e8f1;
+  --card: #ffffff;
+  --panel: #eef2f9;
+  --ink: #15203a;
+  --muted: #56627d;
+  --line: #d3dbe8;
+  --accent: #2648c9;
+  --accent-ink: #ffffff;
+  --resid: #c42f74;
+  --good: #1d7f47;
+  --bad: #bf3626;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0e1422; --grid: #172034; --card: #151d30; --panel: #1b2540; --ink: #e5eaf5; --muted: #98a4bf;
+    --line: #2a3654; --accent: #86a0ff; --accent-ink: #0e1422; --resid: #ff74b4; --good: #55d08c; --bad: #ff8270;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0e1422; --grid: #172034; --card: #151d30; --panel: #1b2540; --ink: #e5eaf5; --muted: #98a4bf;
+  --line: #2a3654; --accent: #86a0ff; --accent-ink: #0e1422; --resid: #ff74b4; --good: #55d08c; --bad: #ff8270;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 72px;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+.wrap { max-width: 1060px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+p { margin: 0; }
+code, .eq, .mono { font-family: var(--f-mono); font-size: 0.9em; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.eyebrow { font-size: 12px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* hero */
+.hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; align-items: center; padding-block: 36px 4px; }
+.hero > * { min-width: 0; }
+.hero h1 { font-size: clamp(38px, 6vw, 64px); font-weight: 800; letter-spacing: -0.02em; margin-block: 8px 14px; }
+.hero h1 .hat { color: var(--accent); }
+.hero .lede { color: var(--muted); font-size: 18px; max-width: 34em; }
+.hero figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 12px 8px; }
+.hero figcaption { font-size: 13px; color: var(--muted); padding: 4px 6px 2px; display: flex; gap: 14px; flex-wrap: wrap; }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.key i { display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--accent); }
+.key i.r { border-top: 2px dashed var(--resid); }
+
+/* formulas */
+.formulas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.formula { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; }
+.formula .eq { font-size: 17px; font-weight: 600; }
+.formula small { color: var(--muted); font-size: 13px; line-height: 1.4; }
+
+/* tabs */
+.tabs {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--paper); border-bottom: 1px solid var(--line);
+  display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding-block: 10px;
+}
+.tabs a {
+  text-decoration: none; color: var(--ink); font-weight: 700; padding: 8px 14px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--card);
+}
+.tabs a[aria-current="page"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.tabs .spacer { flex: 1; }
+.tabs .hint { color: var(--muted); font-size: 13px; }
+
+/* index */
+.index { display: grid; gap: 10px; }
+.index ol { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.index a {
+  display: flex; gap: 10px; align-items: baseline; text-decoration: none; color: var(--ink);
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 14px; line-height: 1.3;
+}
+.index a:hover { border-color: var(--accent); }
+.index b { font-family: var(--f-mono); color: var(--accent); min-width: 1.4em; }
+
+/* topic sheets */
+.topics { display: grid; gap: 22px; }
+.topic { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; scroll-margin-top: 76px; }
+.topic-h { display: flex; gap: 16px; align-items: center; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+.tnum {
+  font-family: var(--f-display); font-weight: 800; font-size: 34px; line-height: 1; color: var(--accent);
+  min-width: 1.6em; font-variant-numeric: tabular-nums;
+}
+.tnum.sm { font-size: 22px; min-width: 1.3em; }
+.topic-h h2 { font-size: clamp(20px, 2.4vw, 25px); font-weight: 600; margin-top: 2px; }
+.topic-b { display: grid; grid-template-columns: 1fr 1fr; }
+.topic-b > * { min-width: 0; padding: 20px 22px 22px; }
+.notes { display: grid; gap: 12px; align-content: start; }
+.notes ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.notes .eq { display: block; background: var(--panel); border-radius: 8px; padding: 8px 12px; font-size: 15px; overflow-x: auto; }
+.tpl { border: 1.5px dashed var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; }
+.tpl .eyebrow { font-size: 11px; }
+.blank { border-bottom: 2px solid var(--accent); padding-inline: 2px; font-style: italic; color: var(--accent); }
+.practice { background: var(--panel); display: grid; gap: 14px; align-content: start; border-left: 1px solid var(--line); }
+.practice-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+
+/* questions */
+.qhost { display: grid; gap: 14px; }
+.q-prompt { display: grid; gap: 8px; }
+.q-prompt .eq { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 16px; font-weight: 600; overflow-x: auto; }
+.q-prompt .def { font-size: 13px; color: var(--muted); }
+.q-plot { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 6px; }
+.plot { display: block; width: 100%; height: auto; max-width: 100%; }
+.plot .gr { stroke: var(--grid); stroke-width: 1; }
+.plot .axis { stroke: var(--muted); stroke-width: 1; }
+.plot .zl { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.plot .tk { fill: var(--muted); font: 10px var(--f-mono); }
+.plot .lab { fill: var(--muted); font: 11px var(--f-body); }
+.plot .pt { fill: var(--accent); }
+.plot .ln { stroke: var(--accent); stroke-width: 2; fill: none; }
+.plot .rs { stroke: var(--resid); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.plot .hl { fill: none; stroke: var(--resid); stroke-width: 2; }
+.plot .hlpt { fill: var(--resid); }
+
+.opts { display: grid; gap: 8px; }
+.opt {
+  display: flex; gap: 10px; align-items: flex-start; text-align: left; width: 100%;
+  font: inherit; font-size: 15px; line-height: 1.45; color: var(--ink);
+  background: var(--card); border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer;
+}
+.opt:hover:not(:disabled) { border-color: var(--accent); }
+.opt .let {
+  flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 12px var(--f-mono); border: 1.5px solid var(--line); color: var(--muted);
+}
+.opt[aria-checked="true"] { border-color: var(--accent); }
+.opt[aria-checked="true"] .let { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.opt:disabled { cursor: default; }
+.opt.right { border-color: var(--good); background: color-mix(in srgb, var(--good) 10%, var(--card)); }
+.opt.right .let { background: var(--good); border-color: var(--good); color: var(--card); }
+.opt.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 9%, var(--card)); }
+.opt.wrong .let { background: var(--bad); border-color: var(--bad); color: var(--card); }
+
+.num { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.num input {
+  font: 600 16px var(--f-mono); color: var(--ink); background: var(--card); border: 1.5px solid var(--line);
+  border-radius: 10px; padding: 9px 12px; width: 11em; max-width: 100%;
+}
+.num input:focus { border-color: var(--accent); outline: none; }
+.num input.right { border-color: var(--good); }
+.num input.wrong { border-color: var(--bad); }
+.num .unit { color: var(--muted); font-size: 14px; }
+.num .err { color: var(--bad); font-size: 13px; flex-basis: 100%; }
+
+.btn {
+  font: 700 14px var(--f-body); color: var(--accent-ink); background: var(--accent); border: 1.5px solid var(--accent);
+  border-radius: 999px; padding: 8px 16px; cursor: pointer;
+}
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+
+.fb { border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; font-size: 15px; background: var(--card); border: 1px solid var(--line); }
+.fb .tag { justify-self: start; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 10px; border-radius: 999px; color: var(--card); }
+.fb.good .tag { background: var(--good); }
+.fb.bad .tag { background: var(--bad); }
+.fb .explain { display: grid; gap: 6px; color: var(--muted); }
+.fb .explain b { color: var(--ink); }
+
+/* test view */
+.test-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; justify-content: space-between; }
+.test-head h2 { font-size: clamp(26px, 3.4vw, 36px); font-weight: 800; }
+.test-head p { color: var(--muted); max-width: 40em; margin-top: 6px; }
+.test-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.tq { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: grid; gap: 12px; }
+.tq .tq-h { display: flex; align-items: center; gap: 10px; }
+.tq .qhost { max-width: 46em; }
+.tq .q-prompt .eq, .tq .opt { background: var(--paper); }
+.tq .q-plot { max-width: 420px; }
+.test-foot { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.test-foot .muted { color: var(--muted); font-size: 14px; }
+.score { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: grid; gap: 14px; }
+.score .big { font-family: var(--f-display); font-weight: 800; font-size: 48px; line-height: 1; font-variant-numeric: tabular-nums; }
+.score .big small { font-size: 20px; color: var(--muted); font-weight: 600; margin-left: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 13px; text-decoration: none; border-radius: 999px; padding: 4px 10px; border: 1.5px solid; }
+.chip.good { color: var(--good); border-color: var(--good); }
+.chip.bad { color: var(--bad); border-color: var(--bad); }
+
+footer { color: var(--muted); font-size: 13px; }
+
+@media (max-width: 860px) {
+  .hero { grid-template-columns: 1fr; padding-top: 24px; }
+  .formulas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .topic-b { grid-template-columns: 1fr; }
+  .practice { border-left: 0; border-top: 1px solid var(--line); }
+}
+@media (max-width: 480px) {
+  .formulas { grid-template-columns: 1fr; }
+  .topic-h { padding: 14px 16px; gap: 12px; }
+  .topic-b > * { padding: 16px; }
+  .tabs .hint { display: none; }
+  .tq { padding: 14px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .opt, .index a, .btn { transition: border-color .15s, background-color .15s; }
+}
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <p class="eyebrow">AP Statistics · Unit 3</p>
+      <h1>Unit 3 Test Review: <span class="hat">ŷ</span> = a + bx</h1>
+      <p class="lede">Twelve skills, one for each question on the test. Read the notes, then practice. Every problem gets new numbers when you press “New question”.</p>
+    </div>
+    <figure>
+      <div id="hero-plot"></div>
+      <figcaption>
+        <span class="key"><i></i> least-squares line</span>
+        <span class="key"><i class="r"></i> residuals (y − ŷ)</span>
+        <span>Hours studied vs. test score</span>
+      </figcaption>
+    </figure>
+  </header>
+
+  <section class="formulas" aria-label="Key formulas">
+    <div class="formula"><span class="eyebrow">Prediction</span><span class="eq">ŷ = a + bx</span><small>Plug in x. ŷ is predicted, not actual.</small></div>
+    <div class="formula"><span class="eyebrow">Residual</span><span class="eq">y − ŷ</span><small>Actual minus predicted. Positive means above the line.</small></div>
+    <div class="formula"><span class="eyebrow">Correlation</span><span class="eq">−1 ≤ r ≤ 1</span><small>Sign gives direction, |r| gives strength. Linear only.</small></div>
+    <div class="formula"><span class="eyebrow">Coefficient of determination</span><span class="eq">r² = (r)²</span><small>% of variation in y explained by the line.</small></div>
+  </section>
+
+  <nav class="tabs" aria-label="Views">
+    <a href="#study" id="tab-study">Study topics</a>
+    <a href="#test" id="tab-test">Practice test</a>
+    <span class="spacer"></span>
+    <span class="hint">Runs in your browser. Nothing is saved or sent anywhere.</span>
+  </nav>
+
+  <main id="view-study" class="wrap">
+    <section class="index" aria-labelledby="index-h">
+      <p class="eyebrow" id="index-h">Each number matches a question on the test</p>
+      <ol id="index"></ol>
+    </section>
+    <div class="topics" id="topics"></div>
+  </main>
+
+  <main id="view-test" class="wrap" hidden>
+    <div class="test-head">
+      <div>
+        <h2>Practice test</h2>
+        <p>Twelve questions in the same order as the real test. Answer them all, then grade. You won’t see answers until you grade.</p>
+      </div>
+      <button type="button" class="btn ghost" id="new-test">New test</button>
+    </div>
+    <section class="score" id="score" hidden aria-live="polite"></section>
+    <ol class="test-list" id="test-list"></ol>
+    <div class="test-foot">
+      <button type="button" class="btn" id="grade">Grade my test</button>
+      <span class="muted" id="progress">0 of 12 answered</span>
+    </div>
+  </main>
+
+  <footer>Strength cutoffs for r (strong ≥ 0.8, moderate 0.5–0.8, weak &lt; 0.5) are a rough guide. Use your teacher’s if they differ.</footer>
+</div>
+
+<script>
+(() => {
+const $ = (s, el = document) => el.querySelector(s);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const rd = (x, d) => { const p = 10 ** d; return Math.round(x * p) / p; };
+const fmt = (x, d) => { const v = rd(x, d) || 0; return v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }).replace('-', '−'); };
+const cap = s => s[0].toUpperCase() + s.slice(1);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+const mean = a => a.reduce((s, v) => s + v, 0) / a.length;
+const parseNum = s => { s = String(s).replace(/[−–]/g, '-').replace(/[$,%\s]/g, ''); if (!/^[-+]?(\d+\.?\d*|\.\d+)$/.test(s)) return NaN; return Number(s); };
+const tolFor = scale => Math.max(0.006, Math.abs(scale) * 0.003);
+
+function corr(p) {
+  const mx = mean(p.map(q => q[0])), my = mean(p.map(q => q[1]));
+  let sxy = 0, sxx = 0, syy = 0;
+  p.forEach(([x, y]) => { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; syy += (y - my) ** 2; });
+  return sxy / Math.sqrt(sxx * syy);
+}
+function lsrl(p) {
+  const mx = mean(p.map(q => q[0])), my = mean(p.map(q => q[1]));
+  let sxy = 0, sxx = 0;
+  p.forEach(([x, y]) => { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; });
+  const b = sxy / sxx; return [my - b * mx, b];
+}
+
+/* ---------- scatterplot SVG ---------- */
+let clipN = 0;
+function ticks(min, max, n = 4) {
+  const raw = (max - min) / n, mag = 10 ** Math.floor(Math.log10(raw)), norm = raw / mag;
+  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+  const out = []; for (let v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) out.push(rd(v, 8));
+  return out;
+}
+const tl = v => Math.abs(v) >= 1000 ? Math.round(v).toLocaleString('en-US') : String(rd(v, 2)).replace('-', '−');
+function plot(pts, o = {}) {
+  const W = 340, H = 230, L = 44, R = 12, T = 12, B = 36;
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  if (o.zero) { const m = Math.max(Math.abs(y0), Math.abs(y1)); y0 = -m; y1 = m; }
+  const px = (x1 - x0) * 0.08 || 1, py = (y1 - y0) * 0.1 || 1;
+  x0 -= px; x1 += px; y0 -= py; y1 += py;
+  const sx = x => L + (x - x0) / (x1 - x0) * (W - L - R);
+  const sy = y => H - B - (y - y0) / (y1 - y0) * (H - T - B);
+  const id = 'clip' + (++clipN);
+  let s = `<svg viewBox="0 0 ${W} ${H}" class="plot" role="img" aria-label="${esc(o.label || 'Scatterplot')}"><defs><clipPath id="${id}"><rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}"/></clipPath></defs>`;
+  ticks(x0, x1).forEach(v => { const X = sx(v).toFixed(1); s += `<line class="gr" x1="${X}" x2="${X}" y1="${T}" y2="${H - B}"/><text class="tk" x="${X}" y="${H - B + 14}" text-anchor="middle">${tl(v)}</text>`; });
+  ticks(y0, y1).forEach(v => { const Y = sy(v).toFixed(1); s += `<line class="gr" x1="${L}" x2="${W - R}" y1="${Y}" y2="${Y}"/><text class="tk" x="${L - 6}" y="${(+Y + 3.5).toFixed(1)}" text-anchor="end">${tl(v)}</text>`; });
+  s += `<line class="axis" x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}"/><line class="axis" x1="${L}" x2="${L}" y1="${T}" y2="${H - B}"/>`;
+  if (o.zero) s += `<line class="zl" x1="${L}" x2="${W - R}" y1="${sy(0).toFixed(1)}" y2="${sy(0).toFixed(1)}"/>`;
+  s += `<g clip-path="url(#${id})">`;
+  if (o.line) {
+    const [a, b] = o.line;
+    if (o.resid) pts.forEach(([x, y]) => { s += `<line class="rs" x1="${sx(x).toFixed(1)}" x2="${sx(x).toFixed(1)}" y1="${sy(y).toFixed(1)}" y2="${sy(a + b * x).toFixed(1)}"/>`; });
+    s += `<line class="ln" x1="${sx(x0)}" x2="${sx(x1)}" y1="${sy(a + b * x0).toFixed(1)}" y2="${sy(a + b * x1).toFixed(1)}"/>`;
+  }
+  s += `</g>`;
+  pts.forEach(([x, y], i) => {
+    const X = sx(x).toFixed(1), Y = sy(y).toFixed(1);
+    if (i === o.hl) s += `<circle class="hl" cx="${X}" cy="${Y}" r="9"/><circle class="hlpt" cx="${X}" cy="${Y}" r="4"/>`;
+    else s += `<circle class="pt" cx="${X}" cy="${Y}" r="4"/>`;
+  });
+  if (o.xlab) s += `<text class="lab" x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle">${esc(o.xlab)}</text>`;
+  if (o.ylab) s += `<text class="lab" transform="translate(11 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">${esc(o.ylab)}</text>`;
+  return s + `</svg>`;
+}
+
+/* ---------- regression contexts ---------- */
+const CTX = [
+  { id: 'study', x: 'hours studied', y: 'test score', xu: 'hours', xu1: 'hour', yu: 'points', yu1: 'point',
+    a: [52, 62], ad: 1, b: [3, 5.5], bd: 2, xr: [1, 9], xd: 1, yd: 2, noise: 6,
+    lead: 'For each additional hour studied', rlead: 'For each additional point on the test',
+    who: v => `a student who studied ${v} hours` },
+  { id: 'car', x: 'age of a used car', y: 'price', xu: 'years', xu1: 'year', yu: 'dollars', yu1: 'dollar', money: true,
+    a: [23000, 28000], ad: 0, b: [-2100, -1400], bd: 0, xr: [1, 12], xd: 0, yd: 0, noise: 2200,
+    lead: 'For each additional year of age', rlead: 'For each additional dollar of price',
+    who: v => `a ${v}-year-old car` },
+  { id: 'ice', x: 'daily high temperature', y: 'ice cream cones sold', xu: '°F', xu1: '°F', yu: 'cones', yu1: 'cone', lowOK: true,
+    a: [-120, -60], ad: 1, b: [3, 4.5], bd: 2, xr: [62, 95], xd: 0, yd: 1, noise: 15,
+    lead: 'For each 1°F increase in daily high temperature', rlead: 'For each additional cone sold',
+    who: v => `a day with a high of ${v}°F` },
+  { id: 'arm', x: 'height', y: 'arm span', xu: 'inches', xu1: 'inch', yu: 'inches', yu1: 'inch', lowOK: true,
+    a: [1, 4], ad: 2, b: [0.93, 1.02], bd: 3, xr: [60, 75], xd: 1, yd: 2, noise: 1.8,
+    lead: 'For each additional inch of height', rlead: 'For each additional inch of arm span',
+    who: v => `a person who is ${v} inches tall` },
+  { id: 'tv', x: 'hours of TV per week', y: 'GPA', xu: 'hours', xu1: 'hour', yu: 'GPA points', yu1: 'GPA point',
+    a: [3.5, 3.8], ad: 2, b: [-0.05, -0.025], bd: 3, xr: [2, 25], xd: 0, yd: 3, noise: 0.35,
+    lead: 'For each additional hour of TV per week', rlead: 'For each additional GPA point',
+    who: v => `a student who watches ${v} hours of TV per week` },
+  { id: 'abs', x: 'number of absences', y: 'final exam score', xu: 'absences', xu1: 'absence', yu: 'points', yu1: 'point',
+    a: [86, 92], ad: 1, b: [-3, -1.5], bd: 2, xr: [0, 10], xd: 0, yd: 2, noise: 6,
+    lead: 'For each additional absence', rlead: 'For each additional point on the final exam',
+    who: v => `a student with ${v} absences` },
+];
+const model = c => ({ a: rd(rnd(...c.a), c.ad), b: rd(rnd(...c.b), c.bd) });
+const sgn = v => v < 0 ? '−' : '+';
+const eq = (c, m) => `ŷ = ${fmt(m.a, c.ad)} ${sgn(m.b)} ${fmt(Math.abs(m.b), c.bd)}x`;
+const defs = c => `<span class="def">x = ${c.x} (${c.xu}) · ŷ = predicted ${c.y} (${c.yu})</span>`;
+const fy = (c, v, d = c.yd) => c.money ? (rd(v, d) < 0 ? '−' : '') + '$' + fmt(Math.abs(v), d) : fmt(v, d);
+const yAmt = (c, v, d = c.yd) => c.money ? '$' + fmt(Math.abs(v), d) : `${fmt(Math.abs(v), d)} ${rd(Math.abs(v), d) === 1 ? c.yu1 : c.yu}`;
+const xAmt = (c, v) => c.xu === '°F' ? `${fmt(v, c.xd)}°F` : `${fmt(v, c.xd)} ${c.xu}`;
+const range = c => c.xu === '°F' ? `${c.xr[0]}°F to ${c.xr[1]}°F` : `${c.xr[0]} to ${c.xr[1]} ${c.xu}`;
+const opt = (html, ok, why = '') => ({ html, ok, why });
+const mc = (prompt, options, explain, plot) => ({ kind: 'mc', prompt, options: shuffle(options), explain, plot });
+
+/* 1. predicted value */
+function g1() {
+  const c = pick(CTX), m = model(c), x = rd(rnd(...c.xr), c.xd), yh = m.a + m.b * x;
+  return {
+    kind: 'num', suffix: c.yu, answer: yh, tol: tolFor(yh), answerText: c.money ? fy(c, yh) : `${fy(c, yh)} ${c.yu}`,
+    prompt: `<p>A regression of ${c.y} on ${c.x} gives</p><span class="eq">${eq(c, m)}</span>${defs(c)}<p>Predict the ${c.y} for ${c.who(fmt(x, c.xd))}.</p>`,
+    explain: `<p>Substitute x = ${fmt(x, c.xd)}: ŷ = ${fmt(m.a, c.ad)} ${sgn(m.b)} ${fmt(Math.abs(m.b), c.bd)}(${fmt(x, c.xd)}) = <b>${fy(c, yh)}</b>.</p><p>It’s a predicted value, so it’s ŷ, not y.</p>`
+  };
+}
+/* 2. residual */
+function g2() {
+  const c = pick(CTX), m = model(c), x = rd(rnd(...c.xr), c.xd), yh = m.a + m.b * x;
+  const y = rd(yh + pick([-1, 1]) * rnd(0.25, 1) * c.noise, c.yd), r = y - yh;
+  return {
+    kind: 'num', suffix: c.yu, answer: r, tol: tolFor(yh), answerText: c.money ? fy(c, r) : `${fy(c, r)} ${c.yu}`,
+    prompt: `<p>The least-squares line for predicting ${c.y} from ${c.x} is</p><span class="eq">${eq(c, m)}</span>${defs(c)}<p>For ${c.who(fmt(x, c.xd))}, the actual ${c.y} was ${c.money ? fy(c, y) : fy(c, y) + ' ' + c.yu}. Find the residual. Include the sign.</p>`,
+    explain: `<p>First ŷ = ${fmt(m.a, c.ad)} ${sgn(m.b)} ${fmt(Math.abs(m.b), c.bd)}(${fmt(x, c.xd)}) = ${fy(c, yh)}.</p><p>Residual = y − ŷ = ${fy(c, y)} − ${fy(c, yh)} = <b>${fy(c, r)}</b>.</p><p>${r > 0 ? 'Positive: the point is above the line, so the model underestimated.' : 'Negative: the point is below the line, so the model overestimated.'}</p>`
+  };
+}
+/* 3. slope */
+function g3() {
+  const c = pick(CTX), m = model(c), dir = m.b > 0 ? 'increases' : 'decreases';
+  return mc(`<p>A regression of ${c.y} on ${c.x} gives</p><span class="eq">${eq(c, m)}</span>${defs(c)}<p>Which is the correct interpretation of the slope?</p>`, [
+    opt(`${c.lead}, the <b>predicted</b> ${c.y} ${dir} by about ${yAmt(c, m.b, c.bd)}.`, true),
+    opt(`${c.lead}, the ${c.y} ${dir} by exactly ${yAmt(c, m.b, c.bd)}.`, false, 'This leaves out “predicted.” The slope describes what the line predicts, not a guarantee for every individual.'),
+    opt(`${c.rlead}, the predicted ${c.x} ${dir} by about ${fmt(Math.abs(m.b), c.bd)} ${c.xu}.`, false, 'This swaps x and y. The slope is change in predicted y per one unit of x.'),
+    opt(`When ${c.x} is 0, the predicted ${c.y} is ${yAmt(c, m.b, c.bd)}.`, false, 'That’s the wording for a y-intercept, and it uses the slope’s number.'),
+  ], `<p>Slope template: “For each additional 1 unit of x, the <b>predicted</b> y ${dir} by |b| units.” The slope here is b = ${fmt(m.b, c.bd)}.</p>`);
+}
+/* 4. residual plot */
+function g4() {
+  const curved = Math.random() < 0.5;
+  const xs = Array.from({ length: 20 }, () => rnd(0, 10));
+  let raw;
+  if (curved) { const k = rnd(0.13, 0.2) * pick([-1, 1]); raw = xs.map(x => k * (x - 5) ** 2 + gauss() * 0.35); }
+  else raw = xs.map(() => gauss());
+  const mu = mean(raw), pts = xs.map((x, i) => [x, raw[i] - mu]);
+  return mc(`<p>A least-squares line was fit to predict y from x. Here is the residual plot. Is a linear model appropriate?</p>`, [
+    opt('Yes. The residuals are randomly scattered around 0 with no clear pattern.', !curved, 'Look again. The residuals bend into a curve, which is a pattern.'),
+    opt('No. The residuals form a curved pattern, so a nonlinear model would fit better.', curved, 'There’s no curve here. The points look like random scatter around 0.'),
+    opt('No. Some residuals are positive and some are negative, so the line misses the data.', false, 'Every residual plot has points above and below 0. That’s expected. What matters is whether there’s a pattern.'),
+    opt('Yes. The residuals form a clear curve, which shows the line follows the data closely.', false, 'A pattern in the residuals is a bad sign. It means the line misses in a predictable way.'),
+  ], `<p>A linear model is appropriate when the residual plot shows <b>random scatter around 0 with no pattern</b>. A curve means the relationship isn’t linear. This plot ${curved ? 'shows a curve, so a linear model is not appropriate' : 'has no pattern, so a linear model is appropriate'}.</p>`,
+  plot(pts, { zero: true, xlab: 'x', ylab: 'Residual', label: 'Residual plot' }));
+}
+/* 5. interpret residual */
+function g5() {
+  const c = pick(CTX), x = rd(rnd(...c.xr), c.xd), e = rd(pick([-1, 1]) * rnd(0.3, 1) * c.noise, c.yd);
+  const w = c.who(fmt(x, c.xd)), hi = e > 0 ? 'higher' : 'lower', lo = e > 0 ? 'lower' : 'higher';
+  return mc(`<p>In a regression of ${c.y} on ${c.x}, the residual for ${w} is <span class="mono">${fy(c, e)}</span>. Which is the correct interpretation?</p>`, [
+    opt(`The actual ${c.y} for ${w} was ${yAmt(c, e)} ${hi} than the ${c.y} predicted by the regression line.`, true),
+    opt(`The actual ${c.y} for ${w} was ${yAmt(c, e)} ${lo} than the ${c.y} predicted by the regression line.`, false, 'Backwards. Residual = actual − predicted, so a ' + (e > 0 ? 'positive residual means actual is above predicted.' : 'negative residual means actual is below predicted.')),
+    opt(`${c.lead}, the predicted ${c.y} changes by ${yAmt(c, e)}.`, false, 'That’s how you’d interpret a slope, not a residual.'),
+    opt(`The regression line predicts ${w} will have a ${c.y} of ${yAmt(c, e)}.`, false, 'The residual is the gap between actual and predicted. It isn’t the prediction itself.'),
+  ], `<p>Residual = actual − predicted. A ${e > 0 ? 'positive' : 'negative'} residual means the actual value was <b>${e > 0 ? 'above' : 'below'}</b> the line, by ${yAmt(c, e)}.</p><p>Template: “The actual y for this individual was |residual| units above/below the value predicted by the line.”</p>`);
+}
+/* 6. interpolation vs extrapolation */
+function g6() {
+  const c = pick(CTX), [lo, hi] = c.xr, span = hi - lo, inside = Math.random() < 0.5;
+  let x;
+  if (inside) x = rd(rnd(lo + 0.15 * span, hi - 0.15 * span), c.xd);
+  else x = rd(c.lowOK && Math.random() < 0.5 ? lo - rnd(0.3, 0.8) * span : hi + rnd(0.3, 0.8) * span, c.xd);
+  return mc(`<p>A regression line for ${c.y} was built from data with ${c.x} from ${range(c)}. A student uses the line to predict the ${c.y} for ${c.who(fmt(x, c.xd))}. Is this interpolation or extrapolation?</p>`, [
+    opt(`Interpolation, because ${xAmt(c, x)} is inside the range of x-values in the data.`, inside, `${xAmt(c, x)} is outside ${range(c)}.`),
+    opt(`Extrapolation, because ${xAmt(c, x)} is outside the range of x-values in the data, so the prediction may be unreliable.`, !inside, `${xAmt(c, x)} is inside ${range(c)}.`),
+    opt(`Extrapolation, because ${xAmt(c, x)} isn’t one of the exact x-values in the data set.`, false, 'An x-value doesn’t have to be an actual data point. Anything inside the range is interpolation.'),
+    opt('Interpolation, because the equation can produce a ŷ for any x-value.', false, 'The equation always gives a number, but that doesn’t make it interpolation. What matters is whether x is inside the data’s range.'),
+  ], `<p><b>Interpolation</b>: predicting for an x inside the range of the data. <b>Extrapolation</b>: predicting outside it, which is risky because the pattern may not continue.</p><p>${xAmt(c, x)} is ${inside ? 'inside' : 'outside'} ${range(c)}, so this is <b>${inside ? 'interpolation' : 'extrapolation'}</b>.</p>`);
+}
+/* 7. y-intercept meaningful */
+const INTERCEPTS = [
+  { setup: 'predicting test score (points) from hours studied, using data from 0 to 9 hours', eq: 'ŷ = 52.4 + 4.6x', yes: true,
+    reason: 'A student can study 0 hours, and 0 is inside the data. The model predicts a score of 52.4 points for a student who doesn’t study.' },
+  { setup: 'predicting final exam score (points) from number of absences, using data from 0 to 12 absences', eq: 'ŷ = 89.1 − 2.3x', yes: true,
+    reason: 'A student can have 0 absences, and that is in the data. The predicted exam score for perfect attendance is 89.1 points.' },
+  { setup: 'predicting resting heart rate (beats per minute) from minutes of exercise per day, using data from 0 to 60 minutes', eq: 'ŷ = 78.2 − 0.21x', yes: true,
+    reason: 'Getting 0 minutes of exercise is realistic and in the data. The predicted resting heart rate for someone who doesn’t exercise is 78.2 bpm.' },
+  { setup: 'predicting ice cream cones sold from daily high temperature (°F), using data from 62°F to 95°F', eq: 'ŷ = −94.3 + 3.8x', yes: false,
+    reason: 'A high of 0°F is far outside the data (62°F to 95°F), and a prediction of −94.3 cones is impossible.' },
+  { setup: 'predicting arm span (inches) from height (inches), using data from 60 to 75 inches', eq: 'ŷ = 2.1 + 0.97x', yes: false,
+    reason: 'Nobody is 0 inches tall, so a predicted arm span at a height of 0 has no meaning.' },
+  { setup: 'predicting house price (dollars) from size (square feet), using data from 1,200 to 3,500 square feet', eq: 'ŷ = 45,000 + 112x', yes: false,
+    reason: 'A house with 0 square feet doesn’t exist, and 0 is far outside the data.' },
+  { setup: 'predicting gas mileage (mpg) from car weight (pounds), using data from 2,400 to 5,200 pounds', eq: 'ŷ = 51.8 − 0.0068x', yes: false,
+    reason: 'A car can’t weigh 0 pounds, and 0 is far outside the data.' },
+];
+function g7() {
+  const s = pick(INTERCEPTS);
+  const opts = [opt((s.yes ? 'Yes. ' : 'No. ') + s.reason, true)];
+  if (s.yes) opts.push(
+    opt('No. The y-intercept is never meaningful in a regression model.', false, 'It can be meaningful. It is here because x = 0 makes sense and is inside the data.'),
+    opt('No. The intercept isn’t a whole number, so it can’t describe a real value.', false, 'Predicted values don’t have to be whole numbers.'));
+  else opts.push(
+    opt('Yes. The intercept is the predicted y when x is 0, so it is always meaningful.', false, 'It only means something if x = 0 makes sense in context and is near the data.'),
+    opt('Yes. Every line crosses the y-axis, so the intercept describes a real situation.', false, 'Crossing the axis is just math. In context, x = 0 has to be realistic and close to the data.'));
+  return mc(`<p>A model for ${s.setup} is</p><span class="eq">${s.eq}</span><p>Does the y-intercept have a meaningful interpretation in context?</p>`, opts,
+    `<p>The y-intercept is the predicted y when x = 0. It’s meaningful only when <b>x = 0 is possible</b> in context <b>and</b> is inside or near the range of the data.</p>`);
+}
+/* 8. outlier effect on r */
+function g8() {
+  for (let t = 0; t < 300; t++) {
+    const s = pick([-1, 1]), f = x => 10 + s * 1.2 * x;
+    const base = Array.from({ length: 14 }, () => { const x = rnd(1, 8); return [x, f(x) + gauss() * 1.4]; });
+    const type = pick(['offy', 'leverOn', 'leverOff']);
+    let p;
+    if (type === 'offy') { const x = rnd(3.5, 5.5); p = [x, f(x) + pick([-1, 1]) * rnd(7, 9)]; }
+    else if (type === 'leverOn') { const x = rnd(15, 18); p = [x, f(x) + gauss() * 0.5]; }
+    else p = [rnd(14, 17), f(rnd(1, 3))];
+    const all = [...base, p], rw = corr(all), ro = corr(base);
+    const stronger = Math.abs(ro) > Math.abs(rw);
+    if (stronger !== (type !== 'leverOn') || Math.abs(Math.abs(ro) - Math.abs(rw)) < 0.08) continue;
+    const reason = {
+      offy: 'The circled point is far from the pattern of the other points. It adds scatter and drags r toward 0, so removing it makes the relationship stronger.',
+      leverOn: 'The circled point is far to the right but falls right in line with the pattern. It stretches the pattern out and props r up, so removing it makes the relationship weaker.',
+      leverOff: 'The circled point is far to the right and well off the pattern. It pulls the line toward itself and weakens r, so removing it makes the relationship stronger.',
+    }[type];
+    return mc(`<p>The scatterplot shows ${all.length} points. The circled point is unusual. If it is removed, what happens to the correlation r?</p>`, [
+      opt('The correlation gets stronger (|r| moves closer to 1).', stronger, 'Compare the r values below.'),
+      opt('The correlation gets weaker (|r| moves closer to 0).', !stronger, 'Compare the r values below.'),
+      opt('r stays the same, because r is resistant to outliers.', false, 'r is not resistant. One unusual point can change it a lot.'),
+    ], `<p>${reason}</p><p>With the point: r = ${fmt(rw, 2)}. Without it: r = <b>${fmt(ro, 2)}</b>.</p>`,
+    plot(all, { hl: all.length - 1, xlab: 'x', ylab: 'y', label: 'Scatterplot with a circled unusual point' }));
+  }
+}
+/* 9. statements about r */
+const R_TRUE = [
+  ['r has no units, so changing units (say, inches to centimeters) doesn’t change r.', 'r is unit-free, so converting units leaves it unchanged.'],
+  ['r measures the strength of a linear relationship only.', 'r says nothing about curved relationships.'],
+  ['r is always between −1 and 1.', 'r can never be below −1 or above 1.'],
+  ['Switching which variable is x and which is y doesn’t change r.', 'The correlation of x with y is the same as y with x.'],
+  ['r is not resistant: a single outlier can change it a lot.', 'Outliers can push r up or down.'],
+];
+const R_FALSE = [
+  ['r = 0.90 means 90% of the points lie on the regression line.', 'r isn’t a percent of points. r² is a percent, and it’s about variation explained.'],
+  ['r = −0.85 shows a weaker relationship than r = 0.50.', 'Strength depends on |r|. 0.85 is stronger than 0.50; the negative sign is just direction.'],
+  ['An r close to 1 proves a linear model is appropriate.', 'Curved data can still have a high r. Check the residual plot.'],
+  ['r = 0 means there is no relationship of any kind between x and y.', 'r = 0 means no linear relationship. There could still be a strong curved one.'],
+  ['Converting x from inches to centimeters changes the value of r.', 'r has no units, so converting units doesn’t change it.'],
+  ['A correlation of r = 1.2 shows an extremely strong relationship.', 'r can never be greater than 1.'],
+  ['If r is strong, then x causes y.', 'Correlation doesn’t imply causation.'],
+  ['Switching x and y changes the sign of r.', 'r stays exactly the same when you switch x and y.'],
+];
+function g9() {
+  const wantTrue = Math.random() < 0.5;
+  const pickN = (arr, n) => shuffle(arr).slice(0, n);
+  const opts = wantTrue
+    ? [...pickN(R_TRUE, 1).map(([h]) => opt(h, true)), ...pickN(R_FALSE, 3).map(([h, w]) => opt(h, false, 'This is false. ' + w))]
+    : [...pickN(R_FALSE, 1).map(([h, w]) => opt(h, true, w)), ...pickN(R_TRUE, 3).map(([h, w]) => opt(h, false, 'This one is true. ' + w))];
+  const key = opts[0];
+  const keyWhy = wantTrue ? (R_TRUE.find(([h]) => h === key.html) || [])[1] : key.why;
+  return mc(`<p>Which statement about the correlation coefficient r is <b>${wantTrue ? 'true' : 'false'}</b>?</p>`, opts,
+    `<p>The ${wantTrue ? 'true' : 'false'} statement is: “${key.html}” ${keyWhy}</p>`);
+}
+/* 10. interpret r */
+function g10() {
+  const c = pick(CTX), sign = Math.sign(c.b[0]);
+  const s = pick(['strong', 'moderate', 'weak']);
+  const mag = { strong: [0.84, 0.97], moderate: [0.55, 0.75], weak: [0.15, 0.4] }[s];
+  const r = sign * rd(rnd(...mag), 2), dir = r > 0 ? 'positive' : 'negative', odir = r > 0 ? 'negative' : 'positive';
+  const ws = s === 'moderate' ? 'strong' : s === 'strong' ? 'weak' : 'strong';
+  return mc(`<p>The correlation between ${c.x} and ${c.y} is <span class="mono">r = ${fmt(r, 2)}</span>. Which is the correct interpretation?</p>`, [
+    opt(`There is a ${s}, ${dir}, linear relationship between ${c.x} and ${c.y}.`, true),
+    opt(`There is a ${s}, ${odir}, linear relationship between ${c.x} and ${c.y}.`, false, `The sign of r gives direction. r = ${fmt(r, 2)} is ${dir}.`),
+    opt(`There is a ${ws}, ${dir}, linear relationship between ${c.x} and ${c.y}.`, false, `|r| = ${fmt(Math.abs(r), 2)} is ${s}, not ${ws}.`),
+    pick([
+      opt(`About ${Math.round(Math.abs(r) * 100)}% of ${c.y} values are correctly predicted from ${c.x}.`, false, 'r is not a percent. Don’t confuse it with r².'),
+      opt(`An increase in ${c.x} causes ${c.y} to ${r > 0 ? 'go up' : 'go down'}.`, false, 'Correlation alone can’t show cause and effect.'),
+    ]),
+  ], `<p>Template: “There is a <b>strength</b>, <b>direction</b>, <b>linear</b> relationship between x and y (in context).”</p><p>Here |r| = ${fmt(Math.abs(r), 2)} is ${s} and the sign is ${dir}.</p>`);
+}
+/* 11. r-squared */
+function g11() {
+  const c = pick(CTX), sign = Math.sign(c.b[0]), v = pick(['r2', 'r', 'interp']);
+  if (v === 'r2') {
+    const r = sign * rd(rnd(0.3, 0.98), 2), p = r * r * 100;
+    return {
+      kind: 'num', suffix: '%', answer: p, check: val => Math.abs((Math.abs(val) <= 1 ? val * 100 : val) - p) <= 0.6,
+      answerText: `${fmt(p, 2)}% (r² = ${fmt(r * r, 4)})`,
+      prompt: `<p>The correlation between ${c.x} and ${c.y} is <span class="mono">r = ${fmt(r, 2)}</span>. What is r², written as a percent?</p>`,
+      explain: `<p>r² = (${fmt(r, 2)})² = ${fmt(r * r, 4)}, about <b>${fmt(p, 1)}%</b>. Squaring always gives a positive number.</p><p>Interpretation: about ${fmt(p, 1)}% of the variation in ${c.y} is explained by the linear model relating ${c.y} to ${c.x}.</p>`
+    };
+  }
+  if (v === 'r') {
+    const r2 = rd(rnd(0.1, 0.95), 2), r = sign * Math.sqrt(r2);
+    return {
+      kind: 'num', suffix: '', answer: r, tol: 0.006, answerText: fmt(r, 3),
+      prompt: `<p>A regression of ${c.y} on ${c.x} has <span class="mono">r² = ${fmt(r2, 2)}</span>, and the slope of the line is ${sign > 0 ? 'positive' : 'negative'}. What is r? Include the sign.</p>`,
+      explain: `<p>r = ±√${fmt(r2, 2)} = ±${fmt(Math.abs(r), 3)}. The slope is ${sign > 0 ? 'positive' : 'negative'}, and r always has the same sign as the slope, so r = <b>${fmt(r, 3)}</b>.</p>`
+    };
+  }
+  const p = Math.round(rnd(18, 94));
+  return mc(`<p>A regression of ${c.y} on ${c.x} has <span class="mono">r² = ${fmt(p / 100, 2)}</span>. Which is the correct interpretation?</p>`, [
+    opt(`About ${p}% of the variation in ${c.y} is explained by the linear model relating ${c.y} to ${c.x}.`, true),
+    opt(`About ${p}% of the ${c.y} values fall on the regression line.`, false, 'r² isn’t about how many points are on the line.'),
+    opt(`The predicted ${c.y} is correct about ${p}% of the time.`, false, 'r² isn’t an accuracy rate for predictions.'),
+    opt(`Changes in ${c.x} cause ${p}% of the changes in ${c.y}.`, false, 'r² says nothing about cause. It measures variation explained by the linear model.'),
+  ], `<p>Template: “About <b>r²%</b> of the variation in y is explained by the linear model relating y to x.”</p>`);
+}
+/* 12. correlation vs causation */
+const CAUSE = [
+  { s: 'Across one summer, beach towns with higher ice cream sales also had more drownings (r = 0.84).', claim: 'ice cream sales cause drownings', lurk: 'hot weather, which brings more swimmers and more ice cream buyers' },
+  { s: 'A survey of 500 students found that students who eat breakfast more often tend to have higher GPAs (r = 0.42).', claim: 'eating breakfast raises GPA', lurk: 'sleep habits or family routines' },
+  { s: 'Countries with more televisions per person tend to have longer life expectancies (r = 0.80).', claim: 'owning more TVs makes people live longer', lurk: 'national wealth' },
+  { s: 'Among elementary school students, shoe size and reading score are strongly correlated (r = 0.71).', claim: 'bigger feet make kids better readers', lurk: 'age, since older kids have bigger feet and read better' },
+  { s: 'At house fires, the number of firefighters sent is strongly correlated with the amount of damage (r = 0.77).', claim: 'sending more firefighters causes more damage', lurk: 'the size of the fire' },
+  { s: 'In a study, 120 volunteers were <b>randomly assigned</b> to sleep either 8 hours or 4 hours, then took the same memory test. The 8-hour group scored much higher.', claim: 'more sleep improves memory scores', exp: true },
+];
+function g12() {
+  const s = pick(CAUSE);
+  if (s.exp) return mc(`<p>${s.s}</p><p>Can we conclude cause and effect?</p>`, [
+    opt(`Yes. Subjects were randomly assigned to treatments, so this experiment gives evidence that ${s.claim}.`, true),
+    opt('No. Correlation never shows causation, no matter how the data were collected.', false, 'A well-designed randomized experiment can show causation.'),
+    opt('No. You can only show causation when r = 1.', false, 'Causation comes from the study design (random assignment), not from the value of r.'),
+    opt('Yes, but only because the difference in scores was large.', false, 'The size of the difference isn’t what allows a cause-and-effect conclusion. Random assignment is.'),
+  ], `<p>Random assignment balances out other variables between the groups, so a randomized experiment <b>can</b> show cause and effect. Observational data can’t.</p>`);
+  return mc(`<p>${s.s}</p><p>Which conclusion is justified?</p>`, [
+    opt(`We can’t conclude that ${s.claim}. This is observational data, and a lurking variable such as ${s.lurk} could explain both.`, true),
+    opt(`${cap(s.claim)}, because the two variables are correlated.`, false, 'Correlation alone never proves cause and effect.'),
+    opt('The correlation proves a cause-and-effect relationship between the two variables.', false, 'Only a randomized experiment can show cause and effect.'),
+    opt('There is no relationship between the variables, because correlation doesn’t mean causation.', false, 'There is a relationship (the correlation). It just isn’t necessarily causal.'),
+  ], `<p><b>Correlation does not imply causation.</b> Watch for a lurking variable that affects both: here, ${s.lurk}. Only a randomized experiment can show cause and effect.</p>`);
+}
+
+/* ---------- topics ---------- */
+const tpl = (label, body) => `<div class="tpl"><span class="eyebrow">${label}</span><span>${body}</span></div>`;
+const B = s => `<span class="blank">${s}</span>`;
+const TOPICS = [
+  { short: 'Predicted value', title: 'Use a regression equation to get a predicted value', gen: g1, notes: `
+    <p>The least-squares regression line (LSRL) is written</p><span class="eq">ŷ = a + bx</span>
+    <ul><li>To predict, plug the x-value into the equation.</li>
+    <li><b>ŷ</b> (“y-hat”) is a predicted value. Plain <b>y</b> is an actual, observed value.</li>
+    <li><b>a</b> is the y-intercept and <b>b</b> is the slope.</li>
+    <li>TI-84: <code>STAT → CALC → 8:LinReg(a+bx)</code></li></ul>` },
+  { short: 'Residuals', title: 'Calculate the residual for a data point', gen: g2, notes: `
+    <span class="eq">residual = y − ŷ</span>
+    <p>Memory trick: <b>A</b>ctual minus <b>P</b>redicted. Find ŷ first, then subtract it from the actual y.</p>
+    <ul><li><b>Positive</b> residual: point is above the line. The model underestimated.</li>
+    <li><b>Negative</b> residual: point is below the line. The model overestimated.</li>
+    <li>The residuals from an LSRL always add up to 0.</li></ul>` },
+  { short: 'Interpret slope', title: 'Interpret slope', gen: g3, notes: `
+    <p>The slope b is the change in <i>predicted</i> y for each one-unit increase in x.</p>
+    ${tpl('Template', `For each additional 1 ${B('unit of x')}, the <b>predicted</b> ${B('y in context')} increases/decreases by ${B('|b|')} ${B('units of y')}.`)}
+    <ul><li>Say “predicted” (or “on average”). Points get taken off without it.</li>
+    <li>Use both variables in context, with units.</li>
+    <li>Negative slope means “decreases.”</li></ul>` },
+  { short: 'Residual plots', title: 'Assess whether a residual plot shows a linear model is appropriate', gen: g4, notes: `
+    <ul><li><b>Appropriate</b>: residuals are randomly scattered around 0 with no pattern.</li>
+    <li><b>Not appropriate</b>: a curved (U-shaped or upside-down U) pattern. The relationship isn’t linear.</li>
+    <li>A fan shape (spread grows or shrinks) means predictions are less reliable where the spread is bigger.</li>
+    <li>Having points above and below 0 is normal. Look for a <i>pattern</i>.</li></ul>` },
+  { short: 'Interpret residual', title: 'Interpret a residual', gen: g5, notes: `
+    <p>A residual is the vertical distance from a point to the line: how far the actual value was from the prediction.</p>
+    ${tpl('Template', `The actual ${B('y in context')} for ${B('this individual')} was ${B('|residual|')} ${B('units')} above/below the value predicted by the regression line.`)}
+    <ul><li>Positive means above (actual was higher than predicted).</li><li>Negative means below (actual was lower).</li></ul>` },
+  { short: 'Interpolation vs. extrapolation', title: 'Know the difference between interpolation and extrapolation', gen: g6, notes: `
+    <ul><li><b>Interpolation</b>: predicting for an x inside the range of the data (smallest x to largest x). Fine even if that exact x isn’t a data point.</li>
+    <li><b>Extrapolation</b>: predicting for an x outside the range. Unreliable, because the pattern might not continue.</li></ul>
+    <p>Example: data on kids ages 2 to 10. Predicting height at age 6 is interpolation. Predicting height at age 30 is extrapolation, and the line would say they’re 9 feet tall.</p>` },
+  { short: 'Is the y-intercept meaningful?', title: 'Assess whether a y-intercept is meaningful', gen: g7, notes: `
+    <p>The y-intercept a is the predicted y when x = 0. It’s meaningful only if both are true:</p>
+    <ul><li>x = 0 is possible in context.</li><li>x = 0 is inside or near the range of the data.</li></ul>
+    ${tpl('Template', `When ${B('x in context')} is 0, the predicted ${B('y in context')} is ${B('a')} ${B('units')}.`)}
+    <p>If it isn’t meaningful, say why: “A height of 0 inches isn’t possible,” or “0°F is far outside the data.”</p>` },
+  { short: 'Outliers and r', title: 'Assess the effect of an outlier on correlation', gen: g8, notes: `
+    <p>r is <b>not resistant</b>. One point can change it a lot.</p>
+    <ul><li>A point <b>off the pattern</b> weakens r. Removing it makes |r| closer to 1.</li>
+    <li>A point <b>far out in x but in line</b> with the pattern strengthens r. Removing it makes r weaker.</li>
+    <li>A point <b>far out in x and off the pattern</b> is influential: it pulls the line and weakens r a lot.</li></ul>` },
+  { short: 'Facts about r', title: 'Evaluate statements about the correlation coefficient', gen: g9, notes: `
+    <ul><li>−1 ≤ r ≤ 1. Sign shows direction; |r| shows strength.</li>
+    <li>Measures <b>linear</b> relationships only.</li>
+    <li>No units. Changing units or switching x and y doesn’t change r.</li>
+    <li>Not resistant to outliers.</li>
+    <li>r = 0 means no <i>linear</i> relationship. There could be a curve.</li>
+    <li>A high r doesn’t prove a line is the right model, and it doesn’t prove causation.</li></ul>` },
+  { short: 'Interpret r', title: 'Identify a correct interpretation of a correlation coefficient', gen: g10, notes: `
+    ${tpl('Template', `There is a ${B('strong / moderate / weak')}, ${B('positive / negative')}, linear relationship between ${B('x in context')} and ${B('y in context')}.`)}
+    <p>All four parts: strength, direction, form (linear), context.</p>
+    <ul><li>|r| ≥ 0.8: strong</li><li>0.5 ≤ |r| &lt; 0.8: moderate</li><li>|r| &lt; 0.5: weak</li></ul>` },
+  { short: 'Calculate r²', title: 'Calculate r-squared', gen: g11, notes: `
+    <span class="eq">r² = r × r</span>
+    ${tpl('Template', `About ${B('r² as a %')} of the variation in ${B('y')} is explained by the linear model relating ${B('y')} to ${B('x')}.`)}
+    <ul><li>r = −0.85 gives r² = 0.7225, about 72.3%.</li>
+    <li>Going back: r = ±√r², and the sign matches the slope. r² = 0.64 with a negative slope gives r = −0.8.</li></ul>` },
+  { short: 'Correlation ≠ causation', title: 'Understand that correlation does not mean causation', gen: g12, notes: `
+    <ul><li>A strong correlation alone never proves that x causes y.</li>
+    <li>Look for a <b>lurking variable</b>: a third variable that affects both. Ice cream sales and drownings both rise in hot weather.</li>
+    <li>Only a well-designed <b>randomized experiment</b> can show cause and effect.</li></ul>` },
+].map((t, i) => ({ ...t, n: i + 1 }));
+
+/* ---------- question rendering ---------- */
+function renderQ(host, q, mode) {
+  const key = `${mode}-t${q.topic}`;
+  q.state = { done: false, choice: null, value: '' };
+  host.innerHTML = `<div class="q-prompt">${q.prompt}</div>${q.plot ? `<figure class="q-plot">${q.plot}</figure>` : ''}<div class="q-ans"></div><div class="fb" hidden></div>`;
+  const ans = $('.q-ans', host);
+  if (q.kind === 'mc') {
+    ans.innerHTML = `<div class="opts" role="radiogroup" aria-label="Answer choices">${q.options.map((o, i) =>
+      `<button type="button" class="opt" role="radio" aria-checked="false" id="${key}-o${i}" data-i="${i}"><span class="let">${'ABCD'[i]}</span><span>${o.html}</span></button>`).join('')}</div>`;
+    ans.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => {
+      if (q.state.done) return;
+      q.state.choice = +b.dataset.i;
+      ans.querySelectorAll('.opt').forEach(x => x.setAttribute('aria-checked', x === b ? 'true' : 'false'));
+      if (mode === 'study') reveal(host, q); else updateProgress();
+    }));
+  } else {
+    ans.innerHTML = `<div class="num"><label class="sr" for="${key}-in">Your answer</label><input id="${key}-in" inputmode="decimal" autocomplete="off" placeholder="Your answer"><span class="unit">${q.suffix || ''}</span>${mode === 'study' ? '<button type="button" class="btn">Check</button>' : ''}<span class="err" hidden>Enter a number, like 72.5 or −3.4.</span></div>`;
+    const inp = $('input', ans), err = $('.err', ans);
+    inp.addEventListener('input', () => { q.state.value = inp.value; err.hidden = true; if (mode === 'test') updateProgress(); });
+    if (mode === 'study') {
+      const go = () => { if (isNaN(parseNum(inp.value))) { err.hidden = false; return; } reveal(host, q); };
+      $('.btn', ans).addEventListener('click', go);
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+    }
+  }
+}
+function isRight(q) {
+  if (q.kind === 'mc') return q.state.choice != null && q.options[q.state.choice].ok;
+  const v = parseNum(q.state.value);
+  if (isNaN(v)) return false;
+  return q.check ? q.check(v) : Math.abs(v - q.answer) <= q.tol;
+}
+function reveal(host, q) {
+  q.state.done = true;
+  const ok = isRight(q), blank = q.kind === 'mc' ? q.state.choice == null : !q.state.value.trim();
+  host.querySelectorAll('.opt').forEach((b, i) => {
+    b.disabled = true;
+    if (q.options[i].ok) b.classList.add('right'); else if (i === q.state.choice) b.classList.add('wrong');
+  });
+  const inp = $('input', host);
+  if (inp) { inp.disabled = true; inp.classList.add(ok ? 'right' : 'wrong'); $('.num .btn', host)?.remove(); $('.err', host).hidden = true; }
+  const chosen = q.kind === 'mc' && q.state.choice != null ? q.options[q.state.choice] : null;
+  const why = !ok && chosen && chosen.why ? `<p>${chosen.why}</p>` : '';
+  const line = q.kind === 'num' ? `<p>Answer: <b>${q.answerText}</b>${q.state.value.trim() ? ` · you entered ${esc(q.state.value.trim())}` : ''}</p>` : '';
+  const fb = $('.fb', host);
+  fb.className = 'fb ' + (ok ? 'good' : 'bad');
+  fb.innerHTML = `<span class="tag">${ok ? 'Correct' : blank ? 'Not answered' : 'Not quite'}</span>${why}${line}<div class="explain">${q.explain}</div>`;
+  fb.hidden = false;
+  return ok;
+}
+
+/* ---------- study view ---------- */
+function newStudyQ(n) {
+  const q = TOPICS[n - 1].gen(); q.topic = n;
+  renderQ($(`[data-q="${n}"]`), q, 'study');
+}
+$('#index').innerHTML = TOPICS.map(t => `<li><a href="#t${t.n}"><b>${t.n}</b><span>${t.short}</span></a></li>`).join('');
+$('#topics').innerHTML = TOPICS.map(t => `
+  <section class="topic" id="t${t.n}" aria-labelledby="t${t.n}-h">
+    <header class="topic-h"><span class="tnum">${t.n}</span><div><p class="eyebrow">Test question ${t.n}</p><h2 id="t${t.n}-h">${t.title}</h2></div></header>
+    <div class="topic-b">
+      <div class="notes">${t.notes}</div>
+      <div class="practice">
+        <div class="practice-h"><span class="eyebrow">Try it</span><button type="button" class="btn ghost" data-new="${t.n}">New question</button></div>
+        <div class="qhost" data-q="${t.n}"></div>
+      </div>
+    </div>
+  </section>`).join('');
+TOPICS.forEach(t => newStudyQ(t.n));
+$('#topics').addEventListener('click', e => { const b = e.target.closest('[data-new]'); if (b) newStudyQ(+b.dataset.new); });
+
+/* ---------- test view ---------- */
+let testQs = [];
+function buildTest() {
+  testQs = TOPICS.map(t => { const q = t.gen(); q.topic = t.n; return q; });
+  $('#test-list').innerHTML = testQs.map(q => `<li class="tq"><div class="tq-h"><span class="tnum sm">${q.topic}</span><span class="eyebrow">${TOPICS[q.topic - 1].short}</span></div><div class="qhost" id="test-q${q.topic}"></div></li>`).join('');
+  testQs.forEach(q => renderQ($('#test-q' + q.topic), q, 'test'));
+  $('#score').hidden = true;
+  $('#grade').disabled = false;
+  updateProgress();
+}
+function updateProgress() {
+  const n = testQs.filter(q => q.kind === 'mc' ? q.state.choice != null : q.state.value.trim() !== '').length;
+  $('#progress').textContent = `${n} of 12 answered`;
+}
+$('#grade').addEventListener('click', () => {
+  const res = testQs.map(q => reveal($('#test-q' + q.topic), q));
+  const score = res.filter(Boolean).length, missed = res.filter(r => !r).length;
+  const box = $('#score');
+  box.innerHTML = `<div class="big">${score} / 12<small>${Math.round(score / 12 * 100)}%</small></div>
+    <p>${missed ? 'Red topics need more practice. Tap one to jump to its notes.' : 'Every question right. Take a new test to make sure it sticks.'}</p>
+    <div class="chips">${TOPICS.map((t, i) => `<a class="chip ${res[i] ? 'good' : 'bad'}" href="#t${t.n}">${t.n}. ${t.short}</a>`).join('')}</div>`;
+  box.hidden = false;
+  $('#grade').disabled = true;
+  $('#progress').textContent = 'Graded. Scroll up for your score, or start a new test.';
+  box.scrollIntoView({ block: 'start', behavior: 'smooth' });
+});
+$('#new-test').addEventListener('click', () => { buildTest(); $('#view-test').scrollIntoView({ block: 'start' }); });
+
+/* ---------- routing ---------- */
+function route() {
+  const h = location.hash.slice(1), test = h === 'test';
+  $('#view-study').hidden = test;
+  $('#view-test').hidden = !test;
+  $('#tab-study').toggleAttribute('aria-current', !test);
+  $('#tab-test').toggleAttribute('aria-current', test);
+  if (!test) $('#tab-study').setAttribute('aria-current', 'page'); else $('#tab-test').setAttribute('aria-current', 'page');
+  if (test && !testQs.length) buildTest();
+  if (/^t\d+$/.test(h)) requestAnimationFrame(() => document.getElementById(h)?.scrollIntoView({ block: 'start' }));
+}
+window.addEventListener('hashchange', route);
+route();
+
+/* ---------- hero plot ---------- */
+const hero = [[1, 58], [2, 63], [2.5, 60], [3, 68], [4, 70], [4.5, 76], [5, 72], [6, 80], [6.5, 78], [7, 87], [8, 84], [9, 92]];
+$('#hero-plot').innerHTML = plot(hero, { line: lsrl(hero), resid: true, xlab: 'Hours studied', ylab: 'Test score', label: 'Scatterplot of hours studied versus test score with the least-squares line and residuals' });
+})();
+</script>
