@@ -1,0 +1,80 @@
+/* Extra styles for Maps / MapDetail / Editor / Daily / Explorer / Challenge. */
+
+/* ---------- map browser ---------- */
+.filter-bar { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.filter-bar .top { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.filter-bar .search { flex: 1 1 240px; min-width: 0; }
+.filter-bar select.input { width: auto; min-width: 150px; }
+.chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip-row button.chip { min-height: 32px; padding: 3px 12px; }
+
+.map-card { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 14px; }
+.map-card.muted-card { opacity: 0.82; }
+.map-card .head { display: flex; gap: 10px; align-items: flex-start; padding-right: 40px; }
+.glyph { width: 40px; height: 40px; flex: none; border-radius: 11px; background: var(--surface-3); display: grid; place-items: center; font-size: 1.35rem; }
+.map-card h3 { margin: 0; font-size: 1.02rem; overflow-wrap: anywhere; }
+.map-card h3 a { color: var(--text); }
+.map-card h3 a:hover { text-decoration: none; }
+.map-card h3 a::after { content: ''; position: absolute; inset: 0; border-radius: var(--radius); }
+.map-card h3 a:focus-visible { outline: none; }
+.map-card h3 a:focus-visible::after { outline: 2px solid var(--teal); outline-offset: 2px; }
+.map-card .by { font-size: 0.82rem; color: var(--muted); }
+.map-card .desc { color: var(--text-2); font-size: 0.88rem; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
+.map-card .stats { display: flex; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 0.82rem; font-weight: 600; margin-top: auto; }
+.map-card .stats span { display: inline-flex; gap: 4px; align-items: center; }
+.map-card .fav { position: absolute; top: 10px; right: 10px; z-index: 2; }
+.fav-btn[aria-pressed='true'] { color: var(--accent-2); border-color: rgba(255, 107, 74, 0.5); background: rgba(255, 107, 74, 0.1); }
+.map-card .low { font-size: 0.8rem; color: var(--warn); }
+.skeleton.card-sk { min-height: 168px; }
+
+/* ---------- map detail ---------- */
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
+.facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; }
+.example-scores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.example-scores > div { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; text-align: center; }
+.example-scores .v { font-weight: 800; font-size: 1.05rem; font-variant-numeric: tabular-nums; color: var(--text); }
+.example-scores .k { font-size: 0.76rem; color: var(--muted); }
+
+/* ---------- editor ---------- */
+.editor .side .card { padding: 14px; flex: none; }
+.editor .map-pane .leaflet-container { cursor: crosshair; }
+.editor .preview .pano { position: absolute; inset: 0; }
+.loc-list { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+.loc-item { display: flex; align-items: center; gap: 8px; padding: 8px 2px; border-bottom: 1px solid var(--border); }
+.loc-item:last-child { border-bottom: 0; }
+.loc-item.sel { background: rgba(245, 196, 81, 0.07); border-radius: 8px; padding-left: 6px; }
+.loc-item .meta { flex: 1; min-width: 0; line-height: 1.25; }
+.loc-item .meta b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
+.loc-item .meta span { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.demo-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 3px rgba(46, 211, 183, 0.25); vertical-align: middle; }
+.pin-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); vertical-align: middle; }
+
+/* ---------- daily ---------- */
+.daily-hero { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 800px) { .daily-hero { grid-template-columns: 1fr; } }
+.countdown { font-size: 2rem; font-weight: 850; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.big-score { font-size: 2.2rem; font-weight: 850; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.flame { color: var(--accent); }
+
+/* ---------- explorer ---------- */
+.medal-key { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 700px) { .medal-key { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.medal-key > div { display: flex; align-items: center; gap: 8px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
+.medal-key .t { line-height: 1.2; font-size: 0.86rem; }
+.medal-key .t b { display: block; text-transform: capitalize; }
+.medal-key .t span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.xp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 8px; }
+.xp-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 11px; }
+.xp-row.locked { opacity: 0.6; }
+.xp-row .fl { font-size: 1.5rem; line-height: 1; flex: none; }
+.xp-row .nm { flex: 1; min-width: 0; line-height: 1.25; }
+.xp-row .nm b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.93rem; }
+.xp-row .nm span { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.section-title { display: flex; align-items: baseline; gap: 10px; margin: 26px 0 10px; }
+.section-title h2 { margin: 0; }
+
+/* ---------- challenge ---------- */
+.who { display: flex; align-items: center; gap: 12px; }
+.code-pill { font-family: var(--mono); letter-spacing: 0.14em; font-weight: 800; color: var(--gold); }
+.user-cell { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 650; }
