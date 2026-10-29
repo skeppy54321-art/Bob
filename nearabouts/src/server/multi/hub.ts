@@ -118,6 +118,7 @@ export class Hub {
       this.transport.send(t.id, 'invite', inv);
       return { online: isOnline(t.id) };
     });
+    on('invites:list', () => ({ invites: this.invites.get(userId) ?? [], roomCode: this.userRoom.get(userId) ?? null }));
     on('invite:dismiss', ({ code }) => { this.invites.set(userId, (this.invites.get(userId) ?? []).filter((i) => i.code !== code)); });
 
     socket.on('disconnect', () => {

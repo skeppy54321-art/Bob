@@ -13,6 +13,38 @@ import countriesMeta from 'world-countries';
 const read = (p: string) => JSON.parse(readFileSync(new URL(`../node_modules/${p}`, import.meta.url), 'utf8'));
 const round = (n: number, d: number) => Math.round(n * 10 ** d) / 10 ** d;
 
+/**
+ * world-atlas / us-atlas geometries are not cut at the antimeridian (they assume a spherical
+ * renderer). Planar code (point-in-polygon, Leaflet) needs them cut, so polygons that jump across
+ * ±180° are shifted into 0..360 and clipped into a western and an eastern part.
+ */
+type Pt = [number, number];
+function clipHalf(ring: Pt[], keepWest: boolean): Pt[] {
+  const keep = (p: Pt) => (keepWest ? p[0] <= 180 : p[0] >= 180);
+  const out: Pt[] = [];
+  for (let i = 0; i < ring.length; i++) {
+    const cur = ring[i], prev = ring[(i + ring.length - 1) % ring.length];
+    const cross = (): Pt => { const t = (180 - prev[0]) / (cur[0] - prev[0]); return [180, prev[1] + t * (cur[1] - prev[1])]; };
+    if (keep(cur)) { if (!keep(prev)) out.push(cross()); out.push(cur); }
+    else if (keep(prev)) out.push(cross());
+  }
+  if (out.length && (out[0][0] !== out[out.length - 1][0] || out[0][1] !== out[out.length - 1][1])) out.push([...out[0]] as Pt);
+  return out.length >= 4 ? out : [];
+}
+const jumps = (ring: Pt[]) => ring.some((p, i) => i > 0 && Math.abs(p[0] - ring[i - 1][0]) > 180);
+function cutPolygon(poly: Pt[][]): Pt[][][] {
+  if (!poly.some(jumps)) return [poly];
+  const shifted = poly.map((r) => r.map(([x, y]) => [x < 0 ? x + 360 : x, y] as Pt));
+  const west = shifted.map((r) => clipHalf(r, true)).filter((r) => r.length);
+  const east = shifted.map((r) => clipHalf(r, false).map(([x, y]) => [x - 360, y] as Pt)).filter((r) => r.length);
+  return [west, east].filter((p) => p.length && p[0].length);
+}
+function cutAntimeridian(g: any): any {
+  const polys: Pt[][][] = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
+  const out = polys.flatMap(cutPolygon);
+  return out.length === 1 ? { type: 'Polygon', coordinates: out[0] } : { type: 'MultiPolygon', coordinates: out };
+}
+
 function roundGeom(g: any, d: number): any {
   const walk = (c: any): any => (typeof c[0] === 'number' ? [round(c[0], d), round(c[1], d)] : c.map(walk));
   return { type: g.type, coordinates: walk(g.coordinates) };
@@ -46,6 +78,7 @@ function continentOf(c: any): string {
 
 const topo = read('world-atlas/countries-50m.json');
 const fc: any = feature(topo, topo.objects.countries);
+for (const f of fc.features) if (f.geometry) f.geometry = cutAntimeridian(f.geometry);
 const feats: any[] = [];
 const meta: any[] = [];
 const seenMeta = new Set<string>();
@@ -102,6 +135,7 @@ const FIPS: Record<string, [string, string]> = {
 };
 const st = read('us-atlas/states-10m.json');
 const sfc: any = feature(st, st.objects.states);
+for (const f of sfc.features) if (f.geometry) f.geometry = cutAntimeridian(f.geometry);
 const sf: any[] = [];
 for (const f of sfc.features) {
   const e = FIPS[String(f.id).padStart(2, '0')];

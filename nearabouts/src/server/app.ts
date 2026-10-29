@@ -40,7 +40,7 @@ export async function buildApp() {
   // Serve the built web app (npm run build) with SPA fallback.
   const dist = join(process.cwd(), 'dist');
   if (existsSync(dist)) {
-    await app.register(fastifyStatic, { root: dist, wildcard: false, maxAge: '1h' });
+    await app.register(fastifyStatic, { root: dist, wildcard: true, maxAge: '1h' });
     app.setNotFoundHandler((req, reply) => {
       if (req.url.startsWith('/api/') || req.url.startsWith('/socket.io')) return reply.status(404).send({ error: 'Not found', code: 'not_found' });
       return reply.sendFile('index.html', { maxAge: 0 });
