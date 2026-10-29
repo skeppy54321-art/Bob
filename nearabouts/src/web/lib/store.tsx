@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from './api.ts';
-import type { AppConfig, Me } from './types.ts';
+import type { AppConfig, Me, MapStyle } from './types.ts';
 
 type ToastKind = 'info' | 'error' | 'success';
 interface Toast { id: number; text: string; kind: ToastKind; action?: { label: string; onClick: () => void } }
-interface Settings { units: 'km' | 'mi'; reducedMotion: boolean; mapStyle: 'auto' | 'vector' | 'tiles' }
+interface Settings { units: 'km' | 'mi'; reducedMotion: boolean; mapStyle: MapStyle }
 
 interface Ctx {
   user: Me | null;
@@ -21,6 +21,8 @@ const AppCtx = createContext<Ctx>(null as any);
 export const useApp = () => useContext(AppCtx);
 
 const LOCAL_KEY = 'nearabouts:settings';
+const STYLES: MapStyle[] = ['satellite', 'streets', 'borders'];
+const normalize = (s: Settings): Settings => ({ ...s, mapStyle: STYLES.includes(s.mapStyle) ? s.mapStyle : 'satellite' });
 const loadLocal = (): Partial<Settings> => { try { return JSON.parse(localStorage.getItem(LOCAL_KEY) ?? '{}'); } catch { return {}; } };
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -29,7 +31,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [bootError, setBootError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const seq = useRef(0);
-  const [settings, setSettings] = useState<Settings>(() => ({ units: 'km', reducedMotion: false, mapStyle: 'auto', ...loadLocal() }));
+  const [settings, setSettings] = useState<Settings>(() => normalize({ units: 'km', reducedMotion: false, mapStyle: 'satellite', ...loadLocal() }));
 
   const toast = useCallback((text: string, kind: ToastKind = 'info', action?: Toast['action']) => {
     const id = ++seq.current;
@@ -40,7 +42,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async () => {
     const r = await api<{ user: Me }>('/api/me');
     setUser(r.user);
-    if (r.user.settings) setSettings((s) => ({ ...s, ...r.user.settings } as Settings));
+    if (r.user.settings) setSettings((s) => normalize({ ...s, ...r.user.settings } as Settings));
   }, []);
 
   useEffect(() => {

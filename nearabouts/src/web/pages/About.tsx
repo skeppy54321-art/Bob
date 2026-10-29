@@ -175,7 +175,8 @@ export default function About() {
               <li><b>Country metadata</b> — the <code>world-countries</code> dataset.</li>
               <li><b>Maps</b> — <a href="https://leafletjs.com" target="_blank" rel="noreferrer noopener">Leaflet</a>.</li>
               <li><b>Street-level viewer</b> — <a href="https://github.com/mapillary/mapillary-js" target="_blank" rel="noreferrer noopener">MapillaryJS</a>, used in live mode.</li>
-              <li><b>Map tiles</b> — © their providers when a tile server is configured, for example © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer noopener">OpenStreetMap contributors</a>.</li>
+              <li><b>Satellite imagery</b> — <a href="https://s2maps.eu" target="_blank" rel="noreferrer noopener">Sentinel-2 cloudless</a> by EOX IT Services GmbH (contains modified Copernicus Sentinel data), unless the site owner configured another provider.</li>
+              <li><b>Street map &amp; labels</b> — © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer noopener">OpenStreetMap contributors</a>, © <a href="https://carto.com/attributions" target="_blank" rel="noreferrer noopener">CARTO</a>. Each map shows its current credits in the corner.</li>
               <li><b>Everything else</b> — including the demo scenes, avatars and the logo — is original Nearabouts code.</li>
             </ul>
           </section>

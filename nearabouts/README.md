@@ -9,8 +9,9 @@ A location-guessing browser game. You're dropped onto a street somewhere on Eart
   * Team duels
   * Battle Royale: Countries
   * Battle Royale: Distance
-* **Accounts:** guest play with no sign-up, optional accounts, profiles with original avatars, friends and invites, stats, achievements, XP and levels, and leaderboards.
+* **Players:** no sign-up. On your first visit you pick a name and get a random avatar, and this browser remembers you. You also get a profile, friends and invites, stats, achievements, XP and levels, and leaderboards.
 * **Maps:** World, continents, about 200 countries, cities and landmarks, plus a map editor for your own community maps.
+* **Built for laptops and Chromebooks** (keyboard and mouse or touchpad). Phones aren't a target.
 
 > **Demo mode vs. real imagery.** Out of the box, Nearabouts runs in **demo mode**: rounds show illustrated 360° scenes drawn by the game's own code. They are clearly labelled and are not photos. The whole game works in demo mode. To use real street-level photos, add a free Mapillary token (see [Real imagery](#real-imagery-mapillary)).
 
@@ -36,6 +37,7 @@ npm start
 
 Then open **http://localhost:8787** in your browser.
 
+* The first time, it asks for a player name.
 * To test multiplayer on one computer, open a second browser, or a private/incognito window. Each window is a separate player.
 * Press `Ctrl+C` in the terminal to stop the server.
 
@@ -47,7 +49,7 @@ The game is one program: a web server, a real-time server and a small database f
 
 1. runs a **Docker** container or Node.js app,
 2. supports **WebSockets** (for multiplayer), and
-3. has a **persistent disk** for the database file. Without one, accounts and history are wiped every time the site restarts.
+3. has a **persistent disk** for the database file. Without one, players, stats and maps are wiped every time the site restarts.
 
 Both options below cost a few dollars a month and need a payment card. Check their current pricing pages before you sign up, because prices change.
 
@@ -101,9 +103,8 @@ Copy `.env.example` to `.env` for local use, or enter the same names in your hos
 | `IMAGERY_PROVIDER` | `demo` (default, illustrated scenes) or `mapillary` (real photos) |
 | `MAPILLARY_CLIENT_TOKEN` | Your free Mapillary client token. Required for `mapillary`. |
 | `PROVIDER_DAILY_BUDGET` | Max imagery lookups per day (default 2000). Protects against runaway usage. |
-| `MAP_TILE_URL`, `MAP_TILE_ATTRIBUTION` | Optional street map for the guessing map (see below) |
+| `SATELLITE_TILE_URL`, `STREET_TILE_URL`, `LABELS_TILE_URL` (+ `_ATTRIBUTION`, `_MAX_ZOOM`) | Guess-map layers; free defaults built in (see below) |
 | `DATABASE_PATH` | Where the SQLite file lives (`/data/nearabouts.sqlite` in Docker) |
-| `ADMIN_USERNAMES` | Comma-separated usernames allowed to remove anyone's community maps |
 | `TRUST_PROXY` | `true` behind Render/Fly/other proxies, so rate limits see real visitor IPs |
 | `PUBLIC_URL`, `PORT` | Usually not needed |
 
@@ -124,34 +125,69 @@ How it behaves:
 
 > I couldn't reach Mapillary from the build sandbox, so the Mapillary connection is written against their documented API but **has not been tested live**. If something doesn't work, the server log shows the error, and you can switch back to `IMAGERY_PROVIDER=demo` at any time.
 
-### Street map tiles for the guessing map (optional)
+### Guess map: satellite, street map or borders
 
-Without settings, the guessing map shows country borders only. That's enough for world maps, but too little for city maps. To show streets, set for example:
+The map you guess on has three views. Players switch with the buttons in its top-left corner, and their choice is remembered.
 
-```
-MAP_TILE_URL=https://tile.openstreetmap.org/{z}/{x}/{y}.png
-MAP_TILE_ATTRIBUTION=&copy; OpenStreetMap contributors
-```
+| View | Default source (no key needed) | Notes |
+|---|---|---|
+| **Satellite** (default) | [Sentinel-2 cloudless](https://s2maps.eu) by EOX, plus place-name labels from CARTO | Real satellite photos of the whole planet. Sharp enough for towns, coastlines, rivers and fields. Not sharp enough to see individual houses: the imagery has 10 m pixels and gets blurry past zoom level 14–15. |
+| **Map** | CARTO "Voyager" street map (OpenStreetMap data) | Roads and place names |
+| **Borders** | Built into the game | Always works, even if the tile services are down |
 
-OpenStreetMap's own servers only allow light use. For a busy site, use a tile company with a free tier and an API key (MapTiler, Stadia Maps, …) and follow their attribution rules.
+On **Hard** difficulty, labels and the street map are hidden.
+
+> **Licences:** the free defaults are meant for **non-commercial** use. Sentinel-2 cloudless 2020 is licensed CC BY-NC-SA 4.0, and CARTO's free basemaps are free for non-commercial use with credit. A game you play with friends fits; a business would need paid options. The credit lines are shown on the map automatically. I couldn't open these providers' terms pages from the build sandbox, so give them a quick read before launching publicly.
+
+**Want sharper, Google-like satellite close-ups?** Use a provider with a free tier and an API key, then set these variables:
+
+* **MapTiler** (free account, copy your key):
+  ```
+  SATELLITE_TILE_URL=https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=YOUR_KEY
+  SATELLITE_TILE_ATTRIBUTION=&copy; MapTiler &copy; OpenStreetMap contributors
+  SATELLITE_MAX_ZOOM=19
+  ```
+* **Esri World Imagery** (free ArcGIS Location Platform account and API key): use the tile URL from Esri's developer docs for "World Imagery" with your token, and credit "Esri, Maxar, Earthstar Geographics".
+
+Map keys like these are visible to players' browsers. In the provider's dashboard, restrict the key to your website's address.
+
+Other settings:
+* `STREET_TILE_URL` / `STREET_TILE_ATTRIBUTION` replace the street map.
+* `LABELS_TILE_URL` replaces the labels drawn on top of satellite imagery.
+* Set any of these to `none` to turn that layer off.
 
 ## 4. Become an admin (optional)
 
-Set `ADMIN_USERNAMES=yourname` and restart. Your account, once signed up, can edit or remove any community map. You can also run `npm run make-admin -- yourname` on the server.
+Admins can edit or remove anyone's community maps. There are no passwords, so admin rights can't come from a name alone. Run this on the server, using the name you picked in the game:
 
-## 5. Tests
+```bash
+npm run make-admin -- yourname
+```
+
+On Render, run it in the service's **Shell** tab. On Fly.io, use `fly ssh console` first.
+
+## 5. Good to know
+
+* **Your player lives in your browser.** A cookie identifies you, so clearing cookies or switching browsers or computers starts a new player.
+* **Multiplayer rooms live in the server's memory.** If the server restarts (for example, during a redeploy), running room games end. Solo games, profiles and maps are saved in the database and survive restarts.
+
+## 6. Tests
 
 ```bash
 npm test
 ```
 
-This runs the unit and integration tests: scoring, distances, movement rules, timers, the daily challenge, accounts and every multiplayer format.
+This runs the unit and integration tests: scoring, distances, movement rules, timers, the daily challenge, player names, the map editor and every multiplayer format.
 
 ```bash
 npm run e2e
 ```
 
-This drives real browsers against a running server on port 8787. It plays a solo game, a two-player duel, a phone-sized game and a reconnect.
+This drives real browsers against a running server on port 8787. It runs four tests at Chromebook size (1366×768):
+* a solo game with movement checks
+* a two-player duel with a rematch, a reload and a disconnect
+* a three-player Battle Royale
+* a tour of the map editor, daily, explorer, challenges, friends and settings
 
 More documents:
 * [docs/FEATURES.md](docs/FEATURES.md): feature checklist with an honest status for each feature

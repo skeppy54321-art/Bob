@@ -29,7 +29,7 @@ export function registerRoutes(app: FastifyInstance) {
   app.get('/api/config', async () => ({
     provider: { id: imagery.id, label: imagery.label, live: imagery.live, client: imagery.clientConfig() },
     demo: !imagery.live,
-    tiles: config.tileUrl ? { url: config.tileUrl, attribution: config.tileAttribution } : null,
+    tiles: config.tiles,
     modes: MODES, maxRoomPlayers: MAX_ROOM_PLAYERS,
   }));
 

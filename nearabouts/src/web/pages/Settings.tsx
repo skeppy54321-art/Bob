@@ -5,7 +5,8 @@ import { useApp } from '../lib/store.tsx';
 import { Avatar } from '../components/Avatar.tsx';
 import { Segmented, Switch } from '../components/ui.tsx';
 import { NameForm } from '../components/NamePicker.tsx';
-import type { AvatarConfig, Me } from '../lib/types.ts';
+import type { AvatarConfig, Me, MapStyle } from '../lib/types.ts';
+import { availableStyles } from '../lib/leaflet.ts';
 import './account.css';
 
 const FULL = (a: AvatarConfig | undefined): Required<AvatarConfig> => ({ shape: 0, hue: 200, accent: 30, face: 0, pattern: 0, ...(a ?? {}) } as Required<AvatarConfig>);
@@ -51,23 +52,9 @@ export default function Settings() {
               <Switch checked={settings.reducedMotion} onChange={(reducedMotion) => updateSettings({ reducedMotion })} label={settings.reducedMotion ? 'On' : 'Off'} />
             </div>
             <div className="setting-row">
-              <div className="lbl">
-                Guess map style
-                <small>
-                  {config?.tiles
-                    ? 'Auto uses street tiles when you zoom in; Vector always shows the built-in border map.'
-                    : 'This site uses the built-in border map. The site owner can configure a street tile server to offer more detail.'}
-                </small>
-              </div>
-              {config?.tiles ? (
-                <Segmented<'auto' | 'vector' | 'tiles'> label="Guess map style" value={settings.mapStyle} onChange={(mapStyle) => updateSettings({ mapStyle })} options={[
-                  { value: 'auto', label: 'Auto', title: 'Borders when zoomed out, street tiles when zoomed in' },
-                  { value: 'vector', label: 'Borders only', title: 'Built-in border map' },
-                  { value: 'tiles', label: 'Street tiles', title: 'Always use the street tile server' },
-                ]} />
-              ) : (
-                <Segmented<'auto' | 'vector' | 'tiles'> label="Guess map style" value="vector" onChange={() => {}} options={[{ value: 'vector', label: 'Border map' }]} />
-              )}
+              <div className="lbl">Guess map style<small>You can also switch with the buttons in the corner of any map. Hard difficulty hides labels and the street map.</small></div>
+              <Segmented<MapStyle> label="Guess map style" value={settings.mapStyle} onChange={(mapStyle) => updateSettings({ mapStyle })}
+                options={availableStyles(config).map((v) => ({ value: v, label: v === 'satellite' ? 'Satellite' : v === 'streets' ? 'Street map' : 'Borders only' }))} />
             </div>
           </section>
 

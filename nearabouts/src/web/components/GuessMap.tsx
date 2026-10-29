@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { createMap, pinIcon, L } from '../lib/leaflet.ts';
+import { useState } from 'react';
+import { createMap, cycleStyle, pinIcon, availableStyles, STYLE_ICON, L } from '../lib/leaflet.ts';
 import { useApp } from '../lib/store.tsx';
 
 export interface GuessPoint { lat: number; lng: number }
@@ -23,11 +24,13 @@ export function GuessMap({ value, onChange, disabled, bounds, others, labels, re
   cb.current = onChange;
   const dis = useRef(disabled);
   dis.current = disabled;
-  const { config, settings } = useApp();
+  const { config, settings, updateSettings } = useApp();
+  const styles = availableStyles(config, labels !== false);
+  const [style, setStyle] = useState(styles.includes(settings.mapStyle) ? settings.mapStyle : styles[0]);
 
   useEffect(() => {
     if (!el.current) return;
-    const m = createMap(el.current, { config, mapStyle: settings.mapStyle, labels });
+    const m = createMap(el.current, { config, mapStyle: settings.mapStyle, labels, control: false, onStyleChange: (mapStyle) => { setStyle(mapStyle); updateSettings({ mapStyle }); } });
     map.current = m;
     othersLayer.current = L.layerGroup().addTo(m);
     m.getContainer().classList.add('crosshair');
@@ -63,5 +66,16 @@ export function GuessMap({ value, onChange, disabled, bounds, others, labels, re
     for (const o of others ?? []) L.marker([o.lat, o.lng], { icon: pinIcon(o.color, o.label), interactive: false }).bindTooltip(o.label, { permanent: false }).addTo(g);
   }, [others]);
 
-  return <div ref={el} style={{ position: 'absolute', inset: 0 }} data-testid="guess-map" aria-label="Guess map. Click to place your guess." />;
+  const next = styles[(styles.indexOf(style) + 1) % styles.length];
+  return (
+    <>
+      <div ref={el} style={{ position: 'absolute', inset: 0 }} data-testid="guess-map" aria-label="Guess map. Click to place your guess." />
+      {styles.length > 1 && (
+        <button type="button" className="map-cycle" onClick={() => map.current && cycleStyle(map.current)} data-testid="map-style"
+          title={`Switch to ${next === 'satellite' ? 'satellite' : next === 'streets' ? 'street map' : 'border map'} view`} aria-label={`Map view: ${style}. Switch view`}>
+          {STYLE_ICON[style]}
+        </button>
+      )}
+    </>
+  );
 }

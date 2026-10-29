@@ -1,12 +1,41 @@
-/** Shared Leaflet setup: built-in vector basemap (Natural Earth borders) + optional tile layer. */
+/**
+ * Shared Leaflet setup for the guess map and result maps.
+ * Styles: "satellite" (imagery + borders + place labels, like a hybrid view), "streets" (road map)
+ * and "borders" (our built-in Natural Earth border map, works with no tile service at all).
+ * A small switcher on the map changes style live.
+ */
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { AppConfig } from './types.ts';
+import type { AppConfig, MapStyle } from './types.ts';
 
 let countries: Promise<any> | null = null;
 const loadCountries = () => (countries ??= fetch('/geo/countries.json').then((r) => r.json()));
 
-export interface BaseOptions { config: AppConfig | null; mapStyle: 'auto' | 'vector' | 'tiles'; labels?: boolean; interactive?: boolean }
+export interface BaseOptions {
+  config: AppConfig | null;
+  mapStyle: MapStyle;
+  /** false = never show place-name labels or street maps (hard difficulty) */
+  labels?: boolean;
+  onStyleChange?: (s: MapStyle) => void;
+  /** Show the three-button style switcher (default true). Small maps use cycleStyle() instead. */
+  control?: boolean;
+}
+
+export const STYLE_ICON: Record<MapStyle, string> = { satellite: '🛰', streets: '🗺', borders: '🌐' };
+/** Switch a map created by createMap to its next available style; returns the new style. */
+export function cycleStyle(map: L.Map): MapStyle | null {
+  return (map as any)._naCycle?.() ?? null;
+}
+
+const STYLE_LABEL: Record<MapStyle, string> = { satellite: 'Satellite', streets: 'Map', borders: 'Borders' };
+
+export function availableStyles(config: AppConfig | null, labels = true): MapStyle[] {
+  const out: MapStyle[] = [];
+  if (config?.tiles.satellite) out.push('satellite');
+  if (config?.tiles.streets && labels) out.push('streets');
+  out.push('borders');
+  return out;
+}
 
 export function createMap(el: HTMLElement, opts: BaseOptions): L.Map {
   const map = L.map(el, {
@@ -14,20 +43,77 @@ export function createMap(el: HTMLElement, opts: BaseOptions): L.Map {
     zoomSnap: 0.5, wheelPxPerZoomLevel: 90, maxBounds: [[-89, -540], [89, 540]], maxBoundsViscosity: 0.8,
   }).setView([20, 0], 1);
   map.attributionControl.setPrefix(false);
-  const useTiles = !!opts.config?.tiles && opts.mapStyle !== 'vector' && opts.labels !== false;
+  const tiles = opts.config?.tiles;
+  const styles = availableStyles(opts.config, opts.labels !== false);
   const renderer = L.canvas({ padding: 0.5 });
-  loadCountries().then((fc) => {
-    if (!(map as any)._container) return;
-    L.geoJSON(fc, {
+  let current: L.Layer[] = [];
+  let style: MapStyle = styles.includes(opts.mapStyle) ? opts.mapStyle : styles[0];
+
+  const borderLayer = (filled: boolean) => {
+    const g = L.geoJSON(undefined, {
       renderer, interactive: false,
-      style: () => ({ color: '#3d4e68', weight: 0.8, fillColor: useTiles ? 'transparent' : '#1d2a3b', fillOpacity: useTiles ? 0 : 1, opacity: useTiles ? 0 : 1 }),
-    } as any).addTo(map);
-  }).catch(() => {});
-  if (useTiles) {
-    L.tileLayer(opts.config!.tiles!.url, { attribution: opts.config!.tiles!.attribution, maxZoom: 19, className: 'tiles-dark', crossOrigin: true } as any).addTo(map);
-  } else {
-    map.attributionControl.addAttribution('Borders: Natural Earth');
+      style: () => (filled
+        ? { color: '#3d4e68', weight: 0.8, fillColor: '#1d2a3b', fillOpacity: 1 }
+        : { color: '#ffffff', weight: 0.9, opacity: 0.55, fill: false }),
+    } as any);
+    loadCountries().then((fc) => { if ((map as any)._container) g.addData(fc); }).catch(() => {});
+    return g;
+  };
+  const tileLayer = (cfg: { url: string; attribution: string; maxZoom: number }, pane?: string) =>
+    L.tileLayer(cfg.url, { attribution: cfg.attribution, maxNativeZoom: cfg.maxZoom, maxZoom: 18, crossOrigin: true, ...(pane ? { pane } : {}) } as any);
+
+  if (!map.getPane('labels')) {
+    map.createPane('labels');
+    const p = map.getPane('labels')!;
+    p.style.zIndex = '450';
+    p.style.pointerEvents = 'none';
   }
+
+  const apply = (s: MapStyle) => {
+    for (const l of current) map.removeLayer(l);
+    current = [];
+    style = s;
+    el.classList.toggle('map-satellite', s === 'satellite');
+    if (s === 'satellite' && tiles?.satellite) {
+      current.push(tileLayer(tiles.satellite), borderLayer(false));
+      if (tiles.labels && opts.labels !== false) current.push(tileLayer(tiles.labels, 'labels'));
+    } else if (s === 'streets' && tiles?.streets) {
+      current.push(tileLayer(tiles.streets));
+    } else {
+      current.push(borderLayer(true));
+    }
+    for (const l of current) l.addTo(map);
+    switcher?.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.style === s)));
+  };
+
+  // Style switcher control (top-right).
+  let switcher: HTMLElement | null = null;
+  if (styles.length > 1 && opts.control !== false) {
+    const Ctl = L.Control.extend({
+      onAdd() {
+        const div = L.DomUtil.create('div', 'map-style-switch leaflet-bar');
+        for (const s of styles) {
+          const b = L.DomUtil.create('button', '', div) as HTMLButtonElement;
+          b.type = 'button';
+          b.dataset.style = s;
+          b.textContent = STYLE_LABEL[s];
+          b.title = `${STYLE_LABEL[s]} view`;
+          L.DomEvent.on(b, 'click', (e) => { L.DomEvent.stop(e); apply(s); opts.onStyleChange?.(s); });
+        }
+        L.DomEvent.disableClickPropagation(div);
+        switcher = div;
+        return div;
+      },
+    });
+    new Ctl({ position: 'topright' }).addTo(map);
+  }
+  (map as any)._naCycle = () => {
+    const next = styles[(styles.indexOf(style) + 1) % styles.length];
+    apply(next);
+    opts.onStyleChange?.(next);
+    return next;
+  };
+  apply(style);
   return map;
 }
 

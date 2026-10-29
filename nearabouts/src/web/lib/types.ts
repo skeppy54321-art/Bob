@@ -12,10 +12,12 @@ export interface Me extends PublicUser {
   settings: { units?: 'km' | 'mi'; reducedMotion?: boolean; mapStyle?: string };
   level: { level: number; current: number; next: number; progress: number };
 }
+export interface TileCfg { url: string; attribution: string; maxZoom: number }
+export type MapStyle = 'satellite' | 'streets' | 'borders';
 export interface AppConfig {
   provider: { id: string; label: string; live: boolean; client: Record<string, any> };
   demo: boolean;
-  tiles: { url: string; attribution: string } | null;
+  tiles: { satellite: TileCfg | null; streets: TileCfg | null; labels: TileCfg | null };
   modes: { id: string; name: string; blurb: string; solo: boolean }[];
   maxRoomPlayers: number;
 }

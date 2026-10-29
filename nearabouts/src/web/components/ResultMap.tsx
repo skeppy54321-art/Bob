@@ -8,10 +8,10 @@ export interface ResultPair { answer: { lat: number; lng: number; label?: string
 /** Shows answers, guesses and the lines between them; frames everything. */
 export function ResultMap({ pairs, animate = true }: { pairs: ResultPair[]; animate?: boolean }) {
   const el = useRef<HTMLDivElement>(null);
-  const { config, settings } = useApp();
+  const { config, settings, updateSettings } = useApp();
   useEffect(() => {
     if (!el.current) return;
-    const m = createMap(el.current, { config, mapStyle: settings.mapStyle });
+    const m = createMap(el.current, { config, mapStyle: settings.mapStyle, onStyleChange: (mapStyle) => updateSettings({ mapStyle }) });
     const pts: L.LatLngExpression[] = [];
     for (const p of pairs) {
       const a: [number, number] = [p.answer.lat, p.answer.lng];
