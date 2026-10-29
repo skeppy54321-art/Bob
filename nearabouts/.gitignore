@@ -1,0 +1,7 @@
+node_modules/
+dist/
+data/*.sqlite*
+.env
+*.log
+test-results/
+e2e/screenshots/
