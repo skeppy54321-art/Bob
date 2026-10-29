@@ -46,7 +46,8 @@ export const config = {
     labels: tileLayer('LABELS', 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>', 19),
   },
-  cookieSecure: env.COOKIE_SECURE ? env.COOKIE_SECURE === 'true' : env.NODE_ENV === 'production',
+  /** Force the Secure cookie flag on/off. Unset = automatic: Secure only when the request arrived over HTTPS. */
+  cookieSecure: env.COOKIE_SECURE ? env.COOKIE_SECURE === 'true' : null,
   trustProxy: env.TRUST_PROXY === 'true',
   /** Multiplayer timings (ms) — overridable for tests. */
   reconnectGraceMs: int(env.RECONNECT_GRACE_MS, 45_000),

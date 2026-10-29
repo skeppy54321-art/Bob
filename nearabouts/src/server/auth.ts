@@ -62,7 +62,10 @@ export function destroySession(token: string | undefined) {
 }
 
 export function setSessionCookie(reply: FastifyReply, token: string) {
-  reply.setCookie(SESSION_COOKIE, token, { path: '/', httpOnly: true, sameSite: 'lax', secure: config.cookieSecure, maxAge: SESSION_TTL / 1000 });
+  // Automatic Secure flag: on for HTTPS (hosting, tunnels), off for plain http on a home network,
+  // where browsers would otherwise refuse the cookie.
+  const secure = config.cookieSecure ?? reply.request.protocol === 'https';
+  reply.setCookie(SESSION_COOKIE, token, { path: '/', httpOnly: true, sameSite: 'lax', secure, maxAge: SESSION_TTL / 1000 });
 }
 
 declare module 'fastify' { interface FastifyRequest { user: UserRow | null } }

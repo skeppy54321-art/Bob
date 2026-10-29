@@ -14,11 +14,12 @@
     "build:data": "tsx scripts/build-geodata.ts",
     "build:web": "vite build",
     "build": "npm run build:web",
-    "start": "NODE_ENV=production node --import tsx src/server/index.ts",
+    "start": "node --import tsx src/server/index.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "make-admin": "tsx scripts/make-admin.ts",
-    "e2e": "node e2e/run.mjs"
+    "e2e": "node e2e/run.mjs",
+    "host": "npm run build && npm start"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.5",

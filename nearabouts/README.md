@@ -43,7 +43,73 @@ Then open **http://localhost:8787** in your browser.
 
 **For development** (auto-reload when you edit code), run `npm run dev` and open http://localhost:5173.
 
-## 2. Put it on the internet (so friends can play without your computer)
+## 2. Host it from your own laptop (free, great for a few friends)
+
+For a handful of players (5 is no problem), your laptop can be the server. You pay nothing. The trade-off: the game only works while your laptop is on, awake and running it.
+
+### Step 1: one-time setup
+1. Install **Node.js 22 LTS** from [nodejs.org](https://nodejs.org).
+   * **On a Chromebook:** first turn on **Settings → About ChromeOS → Developers → Linux development environment**. Then open the **Terminal** app and run these two commands:
+     ```bash
+     curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+     ```
+     ```bash
+     sudo apt-get install -y nodejs
+     ```
+2. Get the code. On GitHub, click **Code → Download ZIP** and unzip it. On a Chromebook, move it into "Linux files".
+3. Open a terminal in the `nearabouts` folder and run:
+   ```bash
+   npm install
+   ```
+
+### Step 2: start the game (every game night)
+```bash
+npm run host
+```
+Leave this window open. You can play at **http://localhost:8787** on your own laptop. Press `Ctrl+C` to stop it. Everyone's names, stats and maps are saved in `data/nearabouts.sqlite`, so they're still there next time.
+
+### Step 3a: friends on the same Wi‑Fi
+1. Find your laptop's local address:
+   * **Windows:** run `ipconfig` and look for "IPv4 Address".
+   * **Mac:** System Settings → Wi‑Fi → Details → IP address.
+2. Friends open **http://YOUR-ADDRESS:8787**, for example `http://192.168.1.23:8787`.
+3. If **Windows** asks whether Node.js may use the network, click **Allow** for private networks.
+4. On a **Chromebook**, also add port `8787` under Settings → Developers → Linux → **Port forwarding**. (Or use step 3b, which works on every computer.)
+
+### Step 3b: friends anywhere (free Cloudflare link)
+1. Install Cloudflare's free `cloudflared` tool:
+   * **Windows:**
+     ```bash
+     winget install --id Cloudflare.cloudflared
+     ```
+   * **Mac:**
+     ```bash
+     brew install cloudflared
+     ```
+   * **Chromebook / Linux:** run these two commands (on an ARM Chromebook, use `arm64` instead of `amd64`):
+     ```bash
+     curl -L -o cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+     ```
+     ```bash
+     sudo dpkg -i cloudflared.deb
+     ```
+2. While the game is running, open a **second** terminal and run:
+   ```bash
+   cloudflared tunnel --url http://localhost:8787
+   ```
+3. It prints a link like `https://some-random-words.trycloudflare.com`. Send that link to your friends.
+
+Notes:
+* No account, router changes or opened ports are needed.
+* The link changes every time you start the tunnel, so send the new one each game night.
+* Cloudflare describes these quick links as a free option for testing and small use with no uptime promise, which suits a game night.
+* Anyone with the link can join, so only share it with your friends.
+
+Tips:
+* Keep the laptop plugged in and stop it from sleeping while you play.
+* Optional: if you use the Cloudflare link, create a file named `.env` in the `nearabouts` folder containing `TRUST_PROXY=true`. This lets the game's anti-spam limits tell your friends apart.
+
+## 3. Or put it on a hosting service (works even when your laptop is off)
 
 The game is one program: a web server, a real-time server and a small database file. It needs a host that:
 
@@ -94,7 +160,7 @@ Notes:
 
 Build with the included `Dockerfile`. Mount a persistent volume at `/data` and expose port `8787`. Set `TRUST_PROXY=true` if the host puts a proxy in front of your app (most do).
 
-## 3. Settings (environment variables)
+## 4. Settings (environment variables)
 
 Copy `.env.example` to `.env` for local use, or enter the same names in your host's "Environment" settings page. **Never commit `.env`**, because it can contain keys. It's already ignored by git.
 
@@ -156,7 +222,7 @@ Other settings:
 * `LABELS_TILE_URL` replaces the labels drawn on top of satellite imagery.
 * Set any of these to `none` to turn that layer off.
 
-## 4. Become an admin (optional)
+## 5. Become an admin (optional)
 
 Admins can edit or remove anyone's community maps. There are no passwords, so admin rights can't come from a name alone. Run this on the server, using the name you picked in the game:
 
@@ -166,12 +232,12 @@ npm run make-admin -- yourname
 
 On Render, run it in the service's **Shell** tab. On Fly.io, use `fly ssh console` first.
 
-## 5. Good to know
+## 6. Good to know
 
 * **Your player lives in your browser.** A cookie identifies you, so clearing cookies or switching browsers or computers starts a new player.
 * **Multiplayer rooms live in the server's memory.** If the server restarts (for example, during a redeploy), running room games end. Solo games, profiles and maps are saved in the database and survive restarts.
 
-## 6. Tests
+## 7. Tests
 
 ```bash
 npm test
