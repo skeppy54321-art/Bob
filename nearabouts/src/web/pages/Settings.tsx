@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../lib/api.ts';
-import { resetSocket } from '../lib/socket.ts';
 import { useApp } from '../lib/store.tsx';
 import { Avatar } from '../components/Avatar.tsx';
 import { Segmented, Switch } from '../components/ui.tsx';
+import { NameForm } from '../components/NamePicker.tsx';
 import type { AvatarConfig, Me } from '../lib/types.ts';
 import './account.css';
 
@@ -30,12 +30,11 @@ const SHORTCUTS: [string[], string][] = [
 export default function Settings() {
   const { user, config, settings, updateSettings, setUser, toast } = useApp();
   const me = user!;
-  const guest = me.guest;
 
   return (
     <div className="stack-lg">
       <div className="page-head">
-        <div><h1>Settings</h1><p>Preferences apply immediately{guest ? ' and are saved to this browser.' : ' and follow your account.'}</p></div>
+        <div><h1>Settings</h1><p>Preferences apply immediately and are saved for you on this site.</p></div>
         <Link className="btn" to={`/u/${encodeURIComponent(me.username)}`}>View my profile</Link>
       </div>
 
@@ -78,24 +77,11 @@ export default function Settings() {
 
         <div className="col" style={{ gap: 16 }}>
           <section className="card" aria-labelledby="acct-h">
-            <h3 id="acct-h">Account</h3>
-            {guest ? (
-              <>
-                <p className="text-2">You’re playing as a guest (<b>{me.username}</b>). Create a free account to keep your progress on any device, add friends and appear on leaderboards.</p>
-                <p className="muted small">Everything you’ve played as a guest — games, stats, XP — carries over to your new account.</p>
-                <div className="row"><Link className="btn primary" to="/signup">Create an account</Link><Link className="btn ghost" to="/login">Log in</Link></div>
-              </>
-            ) : (
-              <>
-                <div className="setting-row"><div className="lbl">Username</div><span>{me.username}</span></div>
-                <div className="setting-row"><div className="lbl">Email</div><span>{me.email ?? <span className="muted">Not set</span>}</span></div>
-                <div className="setting-row"><div className="lbl">Member since</div><span>{new Date(me.createdAt).toLocaleDateString()}</span></div>
-                <div style={{ marginTop: 12 }}><LogoutButton /></div>
-              </>
-            )}
+            <h3 id="acct-h">Your name</h3>
+            <p className="muted small">No sign-up needed: this browser remembers you. Clearing cookies or switching browsers starts a new player.</p>
+            <NameForm submitLabel="Save name and avatar" onDone={() => toast('Saved', 'success')} />
+            <div className="setting-row" style={{ marginTop: 12 }}><div className="lbl">Playing since</div><span>{new Date(me.createdAt).toLocaleDateString()}</span></div>
           </section>
-
-          {!guest && <PasswordForm />}
 
           <section className="card" aria-labelledby="kbd-h">
             <h3 id="kbd-h">Keyboard shortcuts</h3>
@@ -109,18 +95,6 @@ export default function Settings() {
         </div>
       </div>
     </div>
-  );
-}
-
-function LogoutButton() {
-  const { toast } = useApp();
-  const [busy, setBusy] = useState(false);
-  return (
-    <button className="btn danger" disabled={busy} onClick={async () => {
-      setBusy(true);
-      try { await api('/api/auth/logout', { method: 'POST', body: {} }); resetSocket(); window.location.href = '/'; }
-      catch (e) { toast(errorMessage(e), 'error'); setBusy(false); }
-    }}>{busy ? 'Logging out…' : 'Log out'}</button>
   );
 }
 
@@ -189,37 +163,6 @@ function BioEditor({ me, onSaved }: { me: Me; onSaved: (u: Me) => void }) {
           catch (e) { toast(errorMessage(e), 'error'); } finally { setBusy(false); }
         }}>{busy ? 'Saving…' : 'Save bio'}</button>
       </div>
-    </section>
-  );
-}
-
-function PasswordForm() {
-  const { toast } = useApp();
-  const [cur, setCur] = useState('');
-  const [pw, setPw] = useState('');
-  const [pw2, setPw2] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pw.length < 8) return setErr('New passwords need at least 8 characters.');
-    if (pw !== pw2) return setErr('The new passwords don’t match.');
-    setBusy(true); setErr(null);
-    try {
-      await api('/api/me', { method: 'PATCH', body: { currentPassword: cur, password: pw } });
-      toast('Password changed', 'success'); setCur(''); setPw(''); setPw2('');
-    } catch (e2) { setErr(errorMessage(e2)); } finally { setBusy(false); }
-  };
-  return (
-    <section className="card" aria-labelledby="pw-h">
-      <h3 id="pw-h">Change password</h3>
-      <form className="col" onSubmit={submit} noValidate>
-        <label className="field">Current password<input className="input" type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} required /></label>
-        <label className="field">New password<input className="input" type="password" autoComplete="new-password" minLength={8} value={pw} onChange={(e) => setPw(e.target.value)} required /><span className="hint">At least 8 characters.</span></label>
-        <label className="field">Confirm new password<input className="input" type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} required /></label>
-        {err && <div className="error-text" role="alert">{err}</div>}
-        <div><button className="btn primary" type="submit" disabled={busy || !cur || !pw || !pw2}>{busy ? 'Saving…' : 'Change password'}</button></div>
-      </form>
     </section>
   );
 }

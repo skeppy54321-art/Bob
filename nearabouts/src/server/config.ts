@@ -31,7 +31,6 @@ export const config = {
   /** Optional tile server for the guessing map. Empty = built-in vector basemap only. */
   tileUrl: env.MAP_TILE_URL ?? '',
   tileAttribution: env.MAP_TILE_ATTRIBUTION ?? '',
-  adminUsernames: (env.ADMIN_USERNAMES ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
   cookieSecure: env.COOKIE_SECURE ? env.COOKIE_SECURE === 'true' : env.NODE_ENV === 'production',
   trustProxy: env.TRUST_PROXY === 'true',
   /** Multiplayer timings (ms) — overridable for tests. */

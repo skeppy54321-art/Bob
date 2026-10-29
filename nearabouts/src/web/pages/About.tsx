@@ -71,7 +71,7 @@ export default function About() {
               <li>A classic game is <b>5 rounds</b>, up to {fmtInt(MAX_ROUND_SCORE)} points each: a perfect game is {fmtInt(MAX_ROUND_SCORE * 5)}.</li>
               <li>Open the guess map in the corner, click to drop your pin (you can move it), then press <b>Guess</b>.</li>
               <li>Some games have a time limit. If the clock runs out before you guess, the round scores 0.</li>
-              <li>You can play right away as a guest. <Link to="/signup">Create an account</Link> to keep your progress, add friends and join the leaderboards.</li>
+              <li>No sign-up: pick a player name the first time you visit and you get a random avatar (change both any time in Settings). This browser remembers you.</li>
             </ul>
             <h3>Controls</h3>
             <div className="grid cols-2">
@@ -184,8 +184,8 @@ export default function About() {
             <h2>Privacy</h2>
             <p>Nearabouts keeps what it needs to run the game and nothing else.</p>
             <ul>
-              <li><b>Stored:</b> your username, an optional email address, your password (hashed with scrypt — never stored in plain text), your game and match history, and your friends and blocked players.</li>
-              <li><b>Cookies:</b> one session cookie that keeps you signed in (or keeps your guest progress). Preferences like units are also saved in your browser.</li>
+              <li><b>Stored:</b> the player name you picked, your avatar and bio, your game and match history, and your friends and blocked players. No email addresses or passwords are ever collected.</li>
+              <li><b>Cookies:</b> one cookie identifies your browser so you stay the same player. Clearing cookies or switching browsers starts a new player. Preferences like units are also saved in your browser.</li>
               <li><b>No ads, no third-party trackers.</b></li>
               <li><b>Chat:</b> room chat messages are kept only in memory while the room exists and are never written to the database.</li>
               <li>Other players can see your username, avatar, level, bio and public stats on your profile.</li>

@@ -45,7 +45,7 @@ export default function Rooms() {
       <div className="page-head">
         <div>
           <h1>Play with friends</h1>
-          <p>Create a private room, share the code or link, and pick a game. Up to {config!.maxRoomPlayers} players. Guests can join too.</p>
+          <p>Create a private room, share the code or link, and pick a game. Up to {config!.maxRoomPlayers} players — anyone with the link can join.</p>
         </div>
       </div>
 

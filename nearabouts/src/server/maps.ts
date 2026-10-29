@@ -78,7 +78,7 @@ export function playableCount(m: MapRow): number {
 }
 export const invalidateCounts = () => { countCache = null; };
 
-export function mapSummary(m: MapRow, viewerId?: string) {
+export function mapSummary(m: MapRow, viewerId?: string, viewerIsAdmin = false) {
   const fav = viewerId ? !!db.prepare('SELECT 1 FROM map_favorites WHERE user_id=? AND map_id=?').get(viewerId, m.id) : false;
   const favorites = (db.prepare('SELECT COUNT(*) n FROM map_favorites WHERE map_id=?').get(m.id) as any).n;
   const creator = m.creator_id ? (db.prepare('SELECT username FROM users WHERE id=?').get(m.creator_id) as any)?.username ?? null : null;
@@ -88,6 +88,6 @@ export function mapSummary(m: MapRow, viewerId?: string) {
     creator, builtin: !!m.builtin, featured: !!m.featured, visibility: m.visibility, plays: m.plays, favorites,
     favorited: fav, scaleKm: Math.round(m.scale_km), playable: playableCount(m), tags: m.tags ? m.tags.split(',') : [],
     countryCode: region.countries?.length === 1 ? region.countries[0] : null,
-    updatedAt: m.updated_at, isOwner: !!viewerId && viewerId === m.creator_id,
+    updatedAt: m.updated_at, isOwner: (!!viewerId && viewerId === m.creator_id) || (viewerIsAdmin && !m.builtin),
   };
 }

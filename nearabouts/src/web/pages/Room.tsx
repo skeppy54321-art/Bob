@@ -66,7 +66,7 @@ export default function Room() {
   if (!snap) return <div className="main"><Loading label={`Joining room ${upper}…`} /></div>;
 
   const me = snap.members.find((m) => m.id === snap.you);
-  const ctx: Ctx = { snap, me, now, toast, muted, setMuted, leave: () => { emit('room:leave').catch(() => {}); nav('/rooms'); }, isAccount: !!user && !user.guest };
+  const ctx: Ctx = { snap, me, now, toast, muted, setMuted, leave: () => { emit('room:leave').catch(() => {}); nav('/rooms'); }, isAccount: !!user };
   return (
     <>
       {!connected && <div className="toasts" style={{ top: 16, bottom: 'auto' }}><div className="toast error">Connection lost — reconnecting…</div></div>}

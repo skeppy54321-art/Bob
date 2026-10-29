@@ -1,0 +1,26 @@
+# Render Blueprint (https://render.com/docs/blueprint-spec).
+# In Render: New + -> Blueprint -> pick this repository. A persistent disk requires a paid
+# instance type; without a disk the SQLite database is wiped on every deploy/restart.
+services:
+  - type: web
+    name: nearabouts
+    runtime: docker
+    rootDir: nearabouts
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /api/health
+    disk:
+      name: nearabouts-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: IMAGERY_PROVIDER
+        value: demo
+      - key: MAPILLARY_CLIENT_TOKEN
+        sync: false
+      - key: MAP_TILE_URL
+        sync: false
+      - key: MAP_TILE_ATTRIBUTION
+        sync: false
+      - key: ADMIN_USERNAMES
+        sync: false

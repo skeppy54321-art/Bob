@@ -120,43 +120,45 @@ describe('challenges', () => {
   });
 });
 
-describe('accounts', () => {
-  it('upgrades a guest in place and supports login/logout', async () => {
+describe('players (no sign-up)', () => {
+  it('first visit creates an unnamed player; picking a name keeps their history', async () => {
     const c = await T.client();
-    expect(c.me.guest).toBe(true);
+    expect(c.me.guest).toBe(true); // "guest" = has not picked a name yet
     await c.call('POST', '/api/games', { mode: 'quick' });
-    const reg = await c.call('POST', '/api/auth/register', { username: 'tester_1', password: 'correct horse', email: 't@example.com' });
-    expect(reg.status).toBe(200);
-    expect(reg.body.user.id).toBe(c.me.id); // same account, history kept
-    expect(reg.body.user.guest).toBe(false);
+    const r = await c.call('PATCH', '/api/me', { username: 'Wanderer_1', avatar: { shape: 2, hue: 120, accent: 10, face: 3, pattern: 1 } });
+    expect(r.status).toBe(200);
+    expect(r.body.user.id).toBe(c.me.id);
+    expect(r.body.user.guest).toBe(false);
+    expect(r.body.user.username).toBe('Wanderer_1');
+    expect(r.body.user.avatar.shape).toBe(2);
     expect((await c.call('GET', '/api/games')).body.games.length).toBe(1);
-    expect((await c.call('POST', '/api/auth/register', { username: 'tester_1', password: 'whatever12' })).status).toBe(409);
-    await c.call('POST', '/api/auth/logout');
-    const d = await T.client();
-    expect((await d.call('POST', '/api/auth/login', { username: 'tester_1', password: 'wrong pass' })).status).toBe(401);
-    const ok = await d.call('POST', '/api/auth/login', { username: 'TESTER_1', password: 'correct horse' });
-    expect(ok.body.user.username).toBe('tester_1');
-    const stored = db.prepare('SELECT pass_hash FROM users WHERE username=?').get('tester_1') as any;
-    expect(stored.pass_hash).toMatch(/^scrypt\$/);
-    expect(stored.pass_hash).not.toContain('correct horse');
+    // Same cookie = same player on the next visit.
+    expect((await c.call('GET', '/api/me')).body.user.username).toBe('Wanderer_1');
   });
-  it('rejects bad usernames and short passwords', async () => {
+  it('names are unique (case-insensitive) and validated', async () => {
+    const a = await T.client(), b = await T.client();
+    expect((await a.call('PATCH', '/api/me', { username: 'Unique_Name' })).status).toBe(200);
+    expect((await b.call('PATCH', '/api/me', { username: 'unique_name' })).status).toBe(409);
+    expect((await b.call('PATCH', '/api/me', { username: 'a' })).status).toBe(400);
+    expect((await b.call('PATCH', '/api/me', { username: 'has space' })).status).toBe(400);
+    expect((await b.call('PATCH', '/api/me', { username: 'GuestX' })).status).toBe(400);
+    expect((await a.call('PATCH', '/api/me', { username: 'Unique_Name' })).status).toBe(200); // keeping your own name is fine
+  });
+  it('there are no login, sign-up or password endpoints', async () => {
     const c = await T.client();
-    expect((await c.call('POST', '/api/auth/register', { username: 'a', password: 'longenough' })).status).toBe(400);
-    expect((await c.call('POST', '/api/auth/register', { username: 'okname', password: 'short' })).status).toBe(400);
-    expect((await c.call('POST', '/api/auth/register', { username: 'GuestX', password: 'longenough' })).status).toBe(400);
+    for (const url of ['/api/auth/register', '/api/auth/login']) expect((await c.call('POST', url, { username: 'x', password: 'y' })).status).toBe(404);
   });
-  it('guests cannot create maps or friends', async () => {
+  it('players must pick a name before making maps or friends', async () => {
     const c = await T.client();
     expect((await c.call('POST', '/api/maps', { name: 'My map' })).status).toBe(403);
-    expect((await c.call('GET', '/api/friends')).status).toBe(403);
+    expect((await c.call('GET', '/api/friends')).body.code).toBe('name_required');
   });
 });
 
 describe('maps and editor', () => {
   it('creates a map, validates locations against imagery, and publishes at 5+', async () => {
     const c = await T.client();
-    await c.call('POST', '/api/auth/register', { username: 'mapper', password: 'longenough' });
+    await c.call('PATCH', '/api/me', { username: 'mapper' });
     const m = (await c.call('POST', '/api/maps', { name: 'Big cities', visibility: 'private' })).body;
     expect((await c.call('PATCH', `/api/maps/${m.id}`, { visibility: 'public' })).status).toBe(400);
     const water = await c.call('POST', `/api/maps/${m.id}/locations`, { lat: 0, lng: -30 });

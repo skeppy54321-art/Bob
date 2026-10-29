@@ -8,7 +8,7 @@ export type { GameRules, Movement, Difficulty, GameMode } from '../../shared/rul
 export interface AvatarConfig { shape?: number; hue?: number; accent?: number; face?: number; pattern?: number }
 export interface PublicUser { id: string; username: string; avatar: AvatarConfig; guest: boolean; xp: number }
 export interface Me extends PublicUser {
-  email: string | null; bio: string; admin: boolean; createdAt: number;
+  bio: string; admin: boolean; createdAt: number;
   settings: { units?: 'km' | 'mi'; reducedMotion?: boolean; mapStyle?: string };
   level: { level: number; current: number; next: number; progress: number };
 }

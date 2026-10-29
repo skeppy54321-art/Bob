@@ -5,6 +5,7 @@ import { Logo } from './components/Logo.tsx';
 import { Avatar } from './components/Avatar.tsx';
 import { DemoBadge, ErrorBox, Loading } from './components/ui.tsx';
 import { getSocket } from './lib/socket.ts';
+import { NameGate } from './components/NamePicker.tsx';
 import { modeName } from './lib/format.ts';
 
 const Home = lazy(() => import('./pages/Home.tsx'));
@@ -22,7 +23,6 @@ const Profile = lazy(() => import('./pages/Profile.tsx'));
 const Leaderboards = lazy(() => import('./pages/Leaderboards.tsx'));
 const Friends = lazy(() => import('./pages/Friends.tsx'));
 const Settings = lazy(() => import('./pages/Settings.tsx'));
-const Auth = lazy(() => import('./pages/Auth.tsx'));
 const About = lazy(() => import('./pages/About.tsx'));
 const NotFound = lazy(() => import('./pages/NotFound.tsx'));
 
@@ -39,13 +39,13 @@ export default function App() {
 
   // Friend invitations arrive over the socket wherever you are in the app.
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || user?.guest) return;
     const s = getSocket();
     const onInvite = (i: { code: string; from: string; format: string }) =>
       toast(`${i.from} invited you to a ${modeName(i.format)} room`, 'info', { label: 'Join', onClick: () => nav(`/r/${i.code}`) });
     s.on('invite', onInvite);
     return () => { s.off('invite', onInvite); };
-  }, [ready, toast, nav]);
+  }, [ready, user?.guest, toast, nav]);
 
   if (bootError) return <div className="main"><ErrorBox message={`Could not start Nearabouts: ${bootError}`} onRetry={() => location.reload()} /></div>;
   if (!ready) return <div className="main"><Loading label="Starting Nearabouts…" /></div>;
@@ -61,22 +61,20 @@ export default function App() {
             <NavLink to="/rooms">With friends</NavLink>
             <NavLink to="/maps">Maps</NavLink>
             <NavLink to="/leaderboards">Leaderboards</NavLink>
-            {!user!.guest && <NavLink to="/friends">Friends</NavLink>}
+            <NavLink to="/friends">Friends</NavLink>
           </nav>
           <div className="spacer" />
-          <DemoBadge />
-          {user!.guest ? (
-            <Link className="btn sm primary" to="/signup">Sign up</Link>
-          ) : null}
+          <span className="hide-sm"><DemoBadge /></span>
           <Link to={`/u/${user!.username}`} className="row tight" style={{ color: 'var(--text)' }} title="Your profile">
             <Avatar avatar={user!.avatar} size={30} />
-            <span className="small" style={{ fontWeight: 700 }}>{user!.username}</span>
-            <span className="chip">Lv {user!.level.level}</span>
+            <span className="small hide-sm" style={{ fontWeight: 700 }}>{user!.username}</span>
+            <span className="chip hide-sm">Lv {user!.level.level}</span>
           </Link>
           <Link to="/settings" className="btn ghost icon sm" aria-label="Settings" title="Settings">⚙</Link>
           <button className="btn ghost icon sm menu-btn" aria-label="Menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>☰</button>
         </header>
       )}
+      {user!.guest ? <NameGate /> : (
       <Suspense fallback={<div className="main"><Loading /></div>}>
         <Routes>
           <Route path="/" element={<Page><Home /></Page>} />
@@ -94,12 +92,11 @@ export default function App() {
           <Route path="/leaderboards" element={<Page><Leaderboards /></Page>} />
           <Route path="/friends" element={<Page><Friends /></Page>} />
           <Route path="/settings" element={<Page><Settings /></Page>} />
-          <Route path="/login" element={<Page><Auth mode="login" /></Page>} />
-          <Route path="/signup" element={<Page><Auth mode="signup" /></Page>} />
           <Route path="/about" element={<Page><About /></Page>} />
           <Route path="*" element={<Page><NotFound /></Page>} />
         </Routes>
       </Suspense>
+      )}
       {!full && (
         <footer className="footer">
           <Link to="/about">How to play &amp; scoring</Link>

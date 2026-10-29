@@ -2,10 +2,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { db, now, uid, json } from './db.ts';
 import { config } from './config.ts';
-import {
-  HttpError, ensureUser, currentUser, requireAccount, createUser, createSession, destroySession, setSessionCookie,
-  getUserByName, validateUsername, verifyPassword, hashPassword, publicUser, SESSION_COOKIE, type UserRow,
-} from './auth.ts';
+import { HttpError, ensureUser, currentUser, requireAccount, getUserByName, validateUsername, publicUser, type UserRow } from './auth.ts';
 import { createGame, submitGuess, nextRound, gameView, reportUnavailable, dailyInfo, explorerInfo, createChallenge, challengeInfo, recentGames } from './games.ts';
 import { getMap, mapSummary, invalidateCounts, mapLike, type MapRow } from './maps.ts';
 import { imagery } from './imagery/index.ts';
@@ -23,12 +20,10 @@ const str = (v: unknown, max = 200) => (typeof v === 'string' ? v.trim().slice(0
 function me(req: FastifyRequest) {
   const u = currentUser(req);
   if (!u) return null;
-  return { ...publicUser(u), email: u.email, bio: u.bio, admin: !!u.is_admin, settings: json(u.settings, {}), level: levelFromXp(u.xp), createdAt: u.created_at };
+  return { ...publicUser(u), bio: u.bio, admin: !!u.is_admin, settings: json(u.settings, {}), level: levelFromXp(u.xp), createdAt: u.created_at };
 }
 
 export function registerRoutes(app: FastifyInstance) {
-  const authLimit = { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } };
-
   app.get('/api/health', async () => ({ ok: true, time: now() }));
 
   app.get('/api/config', async () => ({
@@ -41,49 +36,7 @@ export function registerRoutes(app: FastifyInstance) {
   // ------------------------------------------------------------ auth
   app.get('/api/me', async (req, reply) => { ensureUser(req, reply); return { user: me(req) }; });
 
-  app.post('/api/auth/register', authLimit, async (req, reply) => {
-    const b = (req.body ?? {}) as any;
-    const username = str(b.username, 20), password = String(b.password ?? ''), email = str(b.email, 200) || null;
-    const bad = validateUsername(username);
-    if (bad) throw new HttpError(400, bad);
-    if (password.length < 8) throw new HttpError(400, 'Passwords need at least 8 characters.');
-    if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new HttpError(400, 'That email address looks wrong.');
-    if (getUserByName(username)) throw new HttpError(409, 'That username is taken.');
-    if (email && db.prepare('SELECT 1 FROM users WHERE email=?').get(email)) throw new HttpError(409, 'That email is already registered.');
-    const cur = currentUser(req);
-    let user: UserRow;
-    if (cur?.is_guest) {
-      // Upgrade the guest in place so their games, stats and friends carry over.
-      db.prepare('UPDATE users SET username=?, email=?, pass_hash=?, is_guest=0, is_admin=? WHERE id=?')
-        .run(username, email, hashPassword(password), config.adminUsernames.includes(username.toLowerCase()) ? 1 : 0, cur.id);
-      user = db.prepare('SELECT * FROM users WHERE id=?').get(cur.id) as UserRow;
-    } else {
-      user = createUser({ username, email, password });
-    }
-    destroySession(req.cookies[SESSION_COOKIE]);
-    setSessionCookie(reply, createSession(user.id));
-    req.user = user;
-    return { user: me(req) };
-  });
-
-  app.post('/api/auth/login', authLimit, async (req, reply) => {
-    const b = (req.body ?? {}) as any;
-    const login = str(b.username, 200);
-    const u = (getUserByName(login) ?? db.prepare('SELECT * FROM users WHERE email=?').get(login)) as UserRow | undefined;
-    if (!u || u.is_guest || !verifyPassword(String(b.password ?? ''), u.pass_hash)) throw new HttpError(401, 'Wrong username or password.');
-    destroySession(req.cookies[SESSION_COOKIE]);
-    setSessionCookie(reply, createSession(u.id));
-    req.user = u;
-    return { user: me(req) };
-  });
-
-  app.post('/api/auth/logout', async (req, reply) => {
-    destroySession(req.cookies[SESSION_COOKIE]);
-    reply.clearCookie(SESSION_COOKIE, { path: '/' });
-    return { ok: true };
-  });
-
-  app.patch('/api/me', async (req, reply) => {
+  app.patch('/api/me', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (req, reply) => {
     const u = ensureUser(req, reply);
     const b = (req.body ?? {}) as any;
     if (b.avatar && typeof b.avatar === 'object') {
@@ -98,10 +51,14 @@ export function registerRoutes(app: FastifyInstance) {
       if (typeof b.settings.mapStyle === 'string') s.mapStyle = str(b.settings.mapStyle, 20);
       db.prepare('UPDATE users SET settings=? WHERE id=?').run(JSON.stringify(s), u.id);
     }
-    if (typeof b.password === 'string' && !u.is_guest) {
-      if (!verifyPassword(String(b.currentPassword ?? ''), u.pass_hash)) throw new HttpError(400, 'Current password is wrong.');
-      if (b.password.length < 8) throw new HttpError(400, 'Passwords need at least 8 characters.');
-      db.prepare('UPDATE users SET pass_hash=? WHERE id=?').run(hashPassword(b.password), u.id);
+    if (b.username !== undefined) {
+      const name = str(b.username, 20);
+      const bad = validateUsername(name);
+      if (bad) throw new HttpError(400, bad);
+      const taken = getUserByName(name);
+      if (taken && taken.id !== u.id) throw new HttpError(409, 'Someone already uses that name — try another.');
+      // Picking a name is all it takes to "join": is_guest=0 means "has chosen a name".
+      db.prepare('UPDATE users SET username=?, is_guest=0 WHERE id=?').run(name, u.id);
     }
     req.user = db.prepare('SELECT * FROM users WHERE id=?').get(u.id) as UserRow;
     return { user: me(req) };
@@ -147,16 +104,16 @@ export function registerRoutes(app: FastifyInstance) {
     const limit = Math.min(60, Math.max(1, Number(q.limit) || 30)), offset = Math.max(0, Number(q.offset) || 0);
     const rows = db.prepare(`SELECT m.*, (SELECT COUNT(*) FROM map_favorites f WHERE f.map_id=m.id) favs FROM maps m WHERE ${where.join(' AND ')}
       ORDER BY ${sort} LIMIT ? OFFSET ?`).all(...args, limit + 1, offset) as MapRow[];
-    return { maps: rows.slice(0, limit).map((m) => mapSummary(m, u.id)), hasMore: rows.length > limit };
+    return { maps: rows.slice(0, limit).map((m) => mapSummary(m, u.id, !!u.is_admin)), hasMore: rows.length > limit };
   });
 
   app.get('/api/maps/:slug', async (req, reply) => {
     const u = ensureUser(req, reply);
     const m = getMap((req.params as any).slug);
-    if (!m || (m.visibility === 'private' && m.creator_id !== u.id)) throw new HttpError(404, 'Map not found.');
+    if (!m || (m.visibility === 'private' && m.creator_id !== u.id && !u.is_admin)) throw new HttpError(404, 'Map not found.');
     const best = db.prepare(`SELECT u.username, MAX(g.total_score) score FROM games g JOIN users u ON u.id=g.user_id
       WHERE g.map_id=? AND g.status='finished' AND g.mode='classic' AND g.round_count=5 AND u.is_guest=0 GROUP BY g.user_id ORDER BY score DESC LIMIT 10`).all(m.id);
-    return { ...mapSummary(m, u.id), description: m.description, highscores: best };
+    return { ...mapSummary(m, u.id, !!u.is_admin), description: m.description, highscores: best };
   });
 
   const ownedMap = (id: string, u: UserRow) => {
@@ -179,7 +136,7 @@ export function registerRoutes(app: FastifyInstance) {
     const vis = ['public', 'unlisted', 'private'].includes(b.visibility) ? b.visibility : 'private';
     db.prepare(`INSERT INTO maps(id, slug, name, description, creator_id, category, kind, region, scale_km, visibility, builtin, featured, status, plays, tags, created_at, updated_at)
       VALUES (?,?,?,?,?,'community','explicit','{}',?,?,0,0,'active',0,?,?,?)`).run(id, slug, name, str(b.description, 500), u.id, 18000, vis, str(b.tags, 120), now(), now());
-    return mapSummary(getMap(id)!, u.id);
+    return mapSummary(getMap(id)!, u.id, !!u.is_admin);
   });
 
   app.patch('/api/maps/:id', async (req) => {
@@ -193,7 +150,7 @@ export function registerRoutes(app: FastifyInstance) {
     db.prepare('UPDATE maps SET name=?, description=?, visibility=?, tags=?, updated_at=? WHERE id=?')
       .run(name, b.description !== undefined ? str(b.description, 500) : m.description, vis, b.tags !== undefined ? str(b.tags, 120) : m.tags, now(), m.id);
     checkAchievements(u.id);
-    return mapSummary(getMap(m.id)!, u.id);
+    return mapSummary(getMap(m.id)!, u.id, !!u.is_admin);
   });
 
   app.delete('/api/maps/:id', async (req) => {

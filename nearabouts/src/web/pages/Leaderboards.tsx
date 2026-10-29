@@ -27,8 +27,6 @@ export default function Leaderboards() {
   const initial = BOARDS.find((b) => b.value === params.get('board'))?.value ?? 'xp';
   const [board, setBoard] = useState<Board>(initial);
   const [scope, setScope] = useState<Scope>(params.get('scope') === 'friends' ? 'friends' : 'global');
-  const guest = !!user?.guest;
-  const needsAccount = scope === 'friends' && guest;
 
   useEffect(() => {
     const next = new URLSearchParams(); next.set('board', board); if (scope === 'friends') next.set('scope', 'friends');
@@ -36,8 +34,8 @@ export default function Leaderboards() {
   }, [board, scope, setParams]);
 
   const { data, error, loading, reload } = useAsync(
-    () => (needsAccount ? Promise.resolve(null) : api<{ entries: Entry[] }>(`/api/leaderboards/${board}?scope=${scope}`)),
-    [board, scope, needsAccount, user?.id],
+    () => api<{ entries: Entry[] }>(`/api/leaderboards/${board}?scope=${scope}`),
+    [board, scope, user?.id],
   );
   const info = BOARDS.find((b) => b.value === board)!;
   const entries = data?.entries ?? [];
@@ -58,12 +56,7 @@ export default function Leaderboards() {
       </div>
 
       <div className="card" style={{ padding: 8 }}>
-        {needsAccount ? (
-          <Empty icon="🫂" title="Friends leaderboards need an account">
-            <p>Create a free account to add friends and compare scores. Your guest progress carries over.</p>
-            <div className="row" style={{ justifyContent: 'center' }}><Link className="btn primary" to="/signup">Create an account</Link><Link className="btn ghost" to="/login">Log in</Link></div>
-          </Empty>
-        ) : error ? (
+        {error ? (
           <ErrorBox message={error} onRetry={reload} />
         ) : loading && !data ? (
           <div className="col" style={{ padding: 10 }} aria-busy="true">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton" style={{ minHeight: 40 }} />)}</div>
@@ -103,7 +96,7 @@ export default function Leaderboards() {
           </div>
         )}
       </div>
-      <p className="small muted">Only registered accounts appear on leaderboards. {guest && <><Link to="/signup">Create an account</Link> to join in — your guest games carry over.</>}</p>
+      <p className="small muted">Everyone who has picked a name appears here.</p>
     </div>
   );
 }

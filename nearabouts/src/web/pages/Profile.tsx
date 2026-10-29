@@ -66,9 +66,7 @@ export default function Profile() {
     setBusy(true);
     try { await fn(); if (okMsg) toast(okMsg, 'success'); await load(true); }
     catch (e) {
-      if (e instanceof ApiError && e.code === 'account_required') {
-        toast('Friends need an account. Sign up to add players.', 'info', { label: 'Sign up', onClick: () => nav('/signup') });
-      } else toast(errorMessage(e), 'error');
+      toast(errorMessage(e), 'error');
     } finally { setBusy(false); }
   };
   const fs = data.friendStatus;
@@ -85,7 +83,6 @@ export default function Profile() {
             <h1>
               {u.username}
               <span className={`dot ${u.online ? 'on' : ''}`} role="img" aria-label={u.online ? 'Online' : 'Offline'} title={u.online ? 'Online now' : 'Offline'} />
-              {u.guest && <span className="chip">Guest</span>}
               {isSelf && <span className="chip teal">You</span>}
             </h1>
             <div className="row tight" style={{ marginBottom: 8 }}>
@@ -102,7 +99,7 @@ export default function Profile() {
           <div className="row" style={{ alignSelf: 'flex-start' }}>
             {isSelf ? (
               <Link className="btn" to="/settings">Edit profile</Link>
-            ) : u.guest ? null : blocked ? (
+            ) : blocked ? (
               <button className="btn" disabled={busy} onClick={() => act(async () => { await api(`/api/blocks/${encodeURIComponent(u.username)}`, { method: 'DELETE' }); setBlocked(false); }, `Unblocked ${u.username}`)}>Unblock</button>
             ) : (
               <>
@@ -125,14 +122,7 @@ export default function Profile() {
             )}
           </div>
         </div>
-        {!isSelf && me?.guest && !u.guest && (
-          <div className="callout info" style={{ marginTop: 14 }}>Playing as a guest. <Link to="/signup">Create an account</Link> to add friends and appear on leaderboards.</div>
-        )}
       </div>
-
-      {u.guest && (
-        <div className="callout">Guests are shown on their own profile only; this player’s results do not appear on leaderboards until they create an account.</div>
-      )}
 
       <section>
         <h2>Stats</h2>

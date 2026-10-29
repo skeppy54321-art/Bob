@@ -270,16 +270,28 @@ button.chip[aria-pressed='true'] { background: var(--surface-3); color: var(--te
 .guess-panel .resize-handle { position: absolute; top: 0; left: 0; width: 18px; height: 18px; cursor: nwse-resize; z-index: 501; }
 .guess-panel .btn.primary { min-height: 46px; font-size: 1rem; }
 .guess-fab { display: none; }
+@media (max-width: 600px) {
+  .hide-sm { display: none !important; }
+  .topbar { gap: 8px; padding: 8px 12px; }
+}
 @media (max-width: 700px) {
   .guess-panel { left: 10px; right: 10px; bottom: 10px; width: auto !important; }
   .guess-panel .map-box { height: 46vh !important; }
   .guess-panel.mobile-hidden .map-box { display: none; }
   .guess-panel .resize-handle, .guess-panel .size-tools { display: none; }
-  .hud-btns { top: auto; bottom: 86px; transform: none; }
+  .hud-btns { left: auto; right: 8px; top: 76px; transform: none; gap: 6px; }
+  .hud-btn { width: 38px; height: 38px; }
+  .hud-btn.zoom { display: none; } /* pinch to zoom on touch screens */
   .hud-top { padding: 8px; }
+  .hud-top > .row:last-child { margin-left: auto; }
   .hud-pill { padding: 5px 10px; gap: 10px; }
-  .attribution { bottom: 76px; max-width: 70vw; }
-  .move-arrows { bottom: 90px; }
+  .hud-pill .kv .v { font-size: 0.92rem; }
+  .compass { width: 48px; height: 48px; }
+  .attribution { bottom: 72px; left: 10px; max-width: calc(100vw - 20px); font-size: 0.66rem; }
+  .move-arrows { bottom: 112px; }
+  .move-arrow { width: 48px; height: 48px; }
+  .players-strip { max-width: 70vw; }
+  .health { width: 130px; }
 }
 
 /* Leaflet tweaks */

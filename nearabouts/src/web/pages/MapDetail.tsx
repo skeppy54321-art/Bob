@@ -159,7 +159,7 @@ export default function MapDetail() {
           <h2 id="hs-h">High scores</h2>
           <p className="hint">Best 5-round classic games by signed-in players.</p>
           {map.highscores.length === 0 ? (
-            <div className="muted" style={{ padding: '14px 0' }}>No scores yet — be the first{user?.guest ? ' (sign up to appear here)' : ''}.</div>
+            <div className="muted" style={{ padding: '14px 0' }}>No scores yet — be the first.</div>
           ) : (
             <div className="list">
               {map.highscores.map((h, i) => (

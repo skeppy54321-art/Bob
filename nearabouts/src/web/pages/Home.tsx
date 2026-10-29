@@ -6,7 +6,7 @@ import { errorMessage } from '../lib/api.ts';
 import { MODE_ICONS } from './Modes.tsx';
 
 export default function Home() {
-  const { user, config, toast } = useApp();
+  const { config, toast } = useApp();
   const nav = useNavigate();
   const [busy, setBusy] = useState(false);
   const quick = async () => {
@@ -45,12 +45,6 @@ export default function Home() {
         ))}
       </section>
 
-      {user!.guest && (
-        <section className="card row between">
-          <div><h3>Playing as {user!.username}</h3><p className="muted" style={{ margin: 0 }}>Create a free account to keep your stats, add friends, appear on leaderboards and make maps. Your progress so far comes with you.</p></div>
-          <Link className="btn primary" to="/signup">Create account</Link>
-        </section>
-      )}
     </div>
   );
 }

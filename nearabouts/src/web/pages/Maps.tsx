@@ -133,17 +133,8 @@ export default function Maps() {
         </>
       )}
 
-      {creating && (user?.guest
-        ? (
-          <Modal title="Create a map" onClose={() => setCreating(false)}>
-            <p className="text-2">Custom maps belong to an account. Sign up (it’s free, and your guest games carry over) to build and share your own maps.</p>
-            <div className="row" style={{ justifyContent: 'flex-end', marginTop: 14 }}>
-              <button className="btn ghost" onClick={() => setCreating(false)}>Not now</button>
-              <Link className="btn primary" to="/signup">Sign up</Link>
-            </div>
-          </Modal>
-        )
-        : <CreateMap onClose={() => setCreating(false)} onCreated={(slug) => nav(`/maps/${slug}/edit`)} />)}
+      {creating && (
+        <CreateMap onClose={() => setCreating(false)} onCreated={(slug) => nav(`/maps/${slug}/edit`)} />)}
     </div>
   );
 }

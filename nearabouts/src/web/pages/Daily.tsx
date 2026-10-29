@@ -119,11 +119,6 @@ export default function Daily() {
           <h2 id="lb-h" style={{ margin: 0 }}>Today’s leaderboard</h2>
           <Link className="small" to="/leaderboards">All leaderboards →</Link>
         </div>
-        {user?.guest && (
-          <div className="callout" style={{ marginBottom: 12 }}>
-            Guests can play the daily challenge, but only signed-in players appear on the leaderboard. <Link to="/signup">Sign up</Link> to claim your spot and keep your streak.
-          </div>
-        )}
         <div className="card" style={{ padding: leaderboard.length ? '6px 10px' : undefined }}>
           {leaderboard.length === 0 ? (
             <Empty icon="📅" title="No one has finished today’s challenge yet">Be the first on the board.</Empty>

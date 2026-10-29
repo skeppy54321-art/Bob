@@ -140,8 +140,8 @@ export function GameStage(p: Props) {
 
       <div className="hud-btns">
         <button className="hud-btn" onClick={() => pano.current?.reset()} title="Return to start (R)" aria-label="Return to start">⟲</button>
-        {allowed.zoom && <button className="hud-btn" onClick={() => pano.current?.zoom(0.8)} title="Zoom in (+)" aria-label="Zoom in">＋</button>}
-        {allowed.zoom && <button className="hud-btn" onClick={() => pano.current?.zoom(1.25)} title="Zoom out (−)" aria-label="Zoom out">－</button>}
+        {allowed.zoom && <button className="hud-btn zoom" onClick={() => pano.current?.zoom(0.8)} title="Zoom in (+)" aria-label="Zoom in">＋</button>}
+        {allowed.zoom && <button className="hud-btn zoom" onClick={() => pano.current?.zoom(1.25)} title="Zoom out (−)" aria-label="Zoom out">－</button>}
         <button className="hud-btn" onClick={toggleFs} title="Fullscreen (F)" aria-label={fs ? 'Exit fullscreen' : 'Fullscreen'}>{fs ? '⤡' : '⤢'}</button>
         <button className="hud-btn" onClick={() => setHelp(true)} title="Controls (?)" aria-label="Controls and shortcuts">?</button>
         {p.onExit && <button className="hud-btn" onClick={p.onExit} title="Leave" aria-label="Leave game">✕</button>}

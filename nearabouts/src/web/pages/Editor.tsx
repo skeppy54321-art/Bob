@@ -32,7 +32,6 @@ export default function Editor() {
   useEffect(() => {
     let live = true;
     setData(null); setProblem(null);
-    if (user?.guest) { setProblem({ title: 'Sign up to edit maps', text: 'Custom maps belong to an account.' }); return; }
     (async () => {
       try {
         const map = await api<Loaded['map']>(`/api/maps/${slug}`);
@@ -49,7 +48,7 @@ export default function Editor() {
       }
     })();
     return () => { live = false; };
-  }, [slug, tick, user?.guest]);
+  }, [slug, tick]);
 
   if (problem) {
     if (problem.retry) return <ErrorBox message={problem.title} onRetry={() => setTick((t) => t + 1)} />;
@@ -57,7 +56,6 @@ export default function Editor() {
       <Empty icon="🔒" title={problem.title}>
         {problem.text}
         <div className="row" style={{ justifyContent: 'center', marginTop: 12 }}>
-          {user?.guest && <Link className="btn primary" to="/signup">Sign up</Link>}
           <Link className="btn" to="/maps">Back to maps</Link>
         </div>
       </Empty>

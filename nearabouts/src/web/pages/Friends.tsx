@@ -19,23 +19,6 @@ function useDebounced<T>(value: T, ms: number) {
 }
 
 export default function Friends() {
-  const { user } = useApp();
-  if (user!.guest) {
-    return (
-      <div className="stack-lg">
-        <div className="page-head"><div><h1>Friends</h1></div></div>
-        <div className="card pad-lg">
-          <Empty icon="🫂" title="Friends need an account">
-            <p>Create a free account to add friends, invite them to rooms and compare scores on friend leaderboards. Everything you’ve played as a guest carries over.</p>
-            <div className="row" style={{ justifyContent: 'center' }}>
-              <Link className="btn primary lg" to="/signup">Create an account</Link>
-              <Link className="btn ghost" to="/login">Log in</Link>
-            </div>
-          </Empty>
-        </div>
-      </div>
-    );
-  }
   return <FriendsInner />;
 }
 

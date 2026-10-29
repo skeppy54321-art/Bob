@@ -2,9 +2,7 @@
 CREATE TABLE users (
   id TEXT PRIMARY KEY,
   username TEXT NOT NULL UNIQUE COLLATE NOCASE,
-  email TEXT UNIQUE COLLATE NOCASE,
-  pass_hash TEXT,
-  is_guest INTEGER NOT NULL DEFAULT 0,
+  is_guest INTEGER NOT NULL DEFAULT 0,  -- 1 = has not picked a player name yet
   is_admin INTEGER NOT NULL DEFAULT 0,
   banned_until INTEGER,
   ban_reason TEXT,
