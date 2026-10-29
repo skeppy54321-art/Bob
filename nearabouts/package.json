@@ -1,0 +1,57 @@
+{
+  "name": "nearabouts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nearabouts - a location guessing game with solo, daily, duel, battle-royale and party modes.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:server": "tsx watch src/server/index.ts",
+    "dev:web": "vite",
+    "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:web\"",
+    "build:data": "tsx scripts/build-geodata.ts",
+    "build:web": "vite build",
+    "build": "npm run build:web",
+    "start": "node --import tsx src/server/index.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "make-admin": "tsx scripts/make-admin.ts",
+    "e2e": "node e2e/run.mjs",
+    "host": "npm run build && npm start"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.5",
+    "@fastify/rate-limit": "^11.2.1",
+    "@fastify/static": "^10.1.8",
+    "better-sqlite3": "^13.0.3",
+    "fastify": "^5.12.7",
+    "leaflet": "^1.9.4",
+    "mapillary-js": "^4.1.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.5",
+    "socket.io": "^4.8.4",
+    "socket.io-client": "^4.8.4",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/geojson": "^7946.0.16",
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/topojson-client": "^3.1.5",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.6",
+    "topojson-client": "^3.1.0",
+    "typescript": "^7.0.2",
+    "us-atlas": "^3.0.1",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5",
+    "world-atlas": "^2.0.2",
+    "world-countries": "^5.1.0"
+  }
+}
