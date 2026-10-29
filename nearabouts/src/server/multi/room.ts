@@ -17,6 +17,7 @@ import { normalizeRules, GUESS_GRACE_MS, MAX_ROOM_PLAYERS } from '../../shared/r
 import { BASE_SETTINGS, FORMAT_DEFAULTS, FORMAT_INFO, multiplierFor, CHAT_PRESETS, type Format, type RoomSettings } from '../../shared/room.ts';
 import { awardXp, checkAchievements } from '../progression.ts';
 import { imagery } from '../imagery/index.ts';
+import { mapBounds } from '../games.ts';
 import { config } from '../config.ts';
 
 export interface Clock { now(): number; setTimeout(fn: () => void, ms: number): unknown; clearTimeout(h: unknown): void }
@@ -750,7 +751,7 @@ export class Room {
     return {
       code: this.code, status: this.status, hostId: this.hostId, you: viewerId, settings: this.settings,
       formatInfo: FORMAT_INFO[this.settings.format],
-      map: map ? { slug: map.slug, name: map.name, scaleKm: map.scale_km } : null,
+      map: map ? { slug: map.slug, name: map.name, scaleKm: map.scale_km, bounds: mapBounds(map) } : null,
       demo: !imagery.live,
       members: [...this.members.values()].filter((m) => !m.left || m.forfeited).map((m) => ({
         id: m.id, username: m.username, avatar: m.avatar, team: m.team, ready: m.ready, connected: m.connected, spectator: m.spectator,

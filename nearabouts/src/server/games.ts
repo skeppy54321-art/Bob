@@ -7,7 +7,7 @@ import { db, now, uid, json, shortCode } from './db.ts';
 import { HttpError, type UserRow } from './auth.ts';
 import { getMap, mapLike, invalidateCounts, type MapRow } from './maps.ts';
 import { getLocation, pickLocations, pickOne, panoPayload, revalidate, candidatesFor, NotEnoughLocationsError, type LocRow } from './locations.ts';
-import { countryAt, stateAt, countryName, stateName, countryByCode } from './geo.ts';
+import { countryAt, stateAt, countryName, stateName, countryByCode, regionBBox, type Region } from './geo.ts';
 import { haversineKm, isValidLatLng, hashString, mulberry32 } from '../shared/geo.ts';
 import { scoreFromDistance, medalFor, betterMedal, type Medal } from '../shared/scoring.ts';
 import { normalizeRules, GUESS_GRACE_MS, type GameRules, type GameMode } from '../shared/rules.ts';
@@ -338,7 +338,7 @@ export function gameView(gameId: string, viewerId: string) {
   return {
     id: g.id, mode: g.mode, status: g.status, rules, roundCount: g.round_count, currentRound: g.current_round,
     totalScore: g.total_score, scaleKm: g.scale_km, serverNow: now(), demo: !imagery.live,
-    map: map ? { slug: map.slug, name: map.name } : null,
+    map: map ? { slug: map.slug, name: map.name, bounds: mapBounds(map) } : null,
     dailyDate: g.daily_date, challengeCode: g.challenge_code, countryCode: g.country_code, countryName: g.country_code ? countryName(g.country_code) : null,
     streak: isStreak(g.mode) ? rounds.filter((r) => r.correct === 1).length : null,
     round: current,
@@ -348,6 +348,15 @@ export function gameView(gameId: string, viewerId: string) {
   };
 }
 export type GameView = ReturnType<typeof gameView>;
+
+/** [south, west, north, east] used to frame the guess map, or null for the whole world. */
+export function mapBounds(m: MapRow): [number, number, number, number] | null {
+  const region = json<Region>(m.region, {});
+  if (region.world || m.kind === 'explicit') return null;
+  const b = regionBBox(region);
+  if (b[2] - b[0] > 300) return null;
+  return [b[1], b[0], b[3], b[2]];
+}
 
 export function dailyInfo(viewer: UserRow | null, date = todayUTC()) {
   const mine = viewer ? (db.prepare('SELECT id, status, total_score FROM games WHERE user_id=? AND daily_date=?').get(viewer.id, date) as any) : null;

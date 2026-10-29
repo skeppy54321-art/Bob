@@ -188,7 +188,7 @@ export function panoPayload(loc: LocRow) {
     provider: loc.provider,
     panoId: loc.pano_id,
     heading: loc.heading,
-    attribution: json(loc.attribution, { text: '' }),
+    attribution: json<{ text: string; url?: string; license?: string }>(loc.attribution, { text: '' }),
     demo: loc.provider === 'demo',
     ...(loc.provider === 'demo' ? { scene: meta } : {}),
   };
