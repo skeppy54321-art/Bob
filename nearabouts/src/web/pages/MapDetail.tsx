@@ -157,7 +157,7 @@ export default function MapDetail() {
 
         <section className="card" aria-labelledby="hs-h">
           <h2 id="hs-h">High scores</h2>
-          <p className="hint">Best 5-round classic games by signed-in players.</p>
+          <p className="hint">Best 5-round classic games on this map.</p>
           {map.highscores.length === 0 ? (
             <div className="muted" style={{ padding: '14px 0' }}>No scores yet — be the first.</div>
           ) : (

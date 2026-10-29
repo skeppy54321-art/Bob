@@ -65,7 +65,7 @@ small, .small { font-size: 0.85rem; }
 .nav a:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
 .nav a.active { color: var(--text); background: var(--surface-2); }
 .topbar .spacer { flex: 1; }
-.menu-btn { display: none; }
+.topbar .menu-btn { display: none; }
 .main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 26px 18px 60px; }
 .main.wide { max-width: 1400px; }
 .footer { border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; padding: 18px; text-align: center; }
@@ -74,7 +74,7 @@ small, .small { font-size: 0.85rem; }
   .nav { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; background: var(--bg-2); border-bottom: 1px solid var(--border); padding: 8px; margin: 0; }
   .nav.open { display: flex; }
   .nav a { padding: 12px; }
-  .menu-btn { display: inline-flex; }
+  .topbar .menu-btn { display: inline-flex; }
   .main { padding: 18px 14px 50px; }
 }
 
