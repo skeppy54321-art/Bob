@@ -452,8 +452,8 @@ function showKeyless(place) {
     "&cbp=12," + heading + ",0,0,0&source=embed&output=svembed";
   $("view").innerHTML = '<iframe title="Street View" allowfullscreen referrerpolicy="no-referrer"></iframe><div id="blocker"></div>';
   $("view").firstChild.src = src;
-  // No Move needs the API; keyless falls back to NMPZ
-  setNmpz(settings.move !== "move");
+  // The embed can't lock movement, so keyless No Move still lets you pan and move; only NMPZ blocks input
+  setNmpz(settings.move === "nmpz");
   state.cur.actual = { lat: place.lat, lng: place.lng };
   state.cur.exact = true;
   return true;
@@ -598,7 +598,7 @@ async function startGame(s, seed) {
       if (settings.mode === "streak") { note("Couldn't load the country map — check your connection."); document.body.classList.remove("loading"); return showMenu(); }
     }
   }
-  if (settings.move === "nomove" && !gmReady) note("No Move needs an API key — playing as NMPZ.", 5000);
+  if (settings.move === "nomove" && !gmReady) note("No Move needs a working API key — you can look around and move freely this game.", 6000);
 
   const rnd = mulberry32(seed);
   const pool = PLACES.filter(mapById(settings.map).filter);
