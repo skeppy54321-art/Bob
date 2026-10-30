@@ -409,10 +409,14 @@ function loadGoogle(key) {
   if (gmReady) return Promise.resolve(true);
   if (gmLoading) return gmLoading;
   gmLoading = new Promise(resolve => {
-    window.gm_authFailure = () => {
-      gmReady = false;
-      note("Your Google API key was rejected — switched to keyless Street View.", 6000);
-      if (state && state.phase === "guess") showKeyless(state.cur.place);
+    window.gm_authFailure = () => keyFailed("InvalidKeyMapError");
+    // Billing and API-not-enabled problems only show up as console errors (plus "development
+    // purposes only" imagery), so watch for them and fall back to keyless Street View.
+    const origError = console.error;
+    console.error = function (...args) {
+      const m = String(args[0]).match(/\b(\w+MapError)\b/);
+      if (m) keyFailed(m[1]);
+      return origError.apply(this, args);
     };
     window.__gmInit = () => { gmReady = true; svService = new google.maps.StreetViewService(); resolve(true); };
     const s = document.createElement("script");
@@ -421,6 +425,20 @@ function loadGoogle(key) {
     document.head.appendChild(s);
   });
   return gmLoading;
+}
+
+const KEY_ERRORS = {
+  BillingNotEnabledMapError: "Your Google key's project needs billing turned on in Google Cloud",
+  ApiNotActivatedMapError: "Your Google key needs the Maps JavaScript API turned on",
+  RefererNotAllowedMapError: "Your Google key is restricted to other websites",
+  ExpiredKeyMapError: "Your Google key has expired"
+};
+function keyFailed(code) {
+  if (keyFailed.done) return;
+  keyFailed.done = true;
+  gmReady = false;
+  note((KEY_ERRORS[code] || "Your Google key was rejected") + " — switched to free Street View.", 9000);
+  if (state && state.phase === "guess") showKeyless(state.cur.place);
 }
 
 // ---------- Street View ----------
@@ -450,6 +468,7 @@ function showWithKey(place) {
   return new Promise(resolve => {
     svService.getPanorama({ location: { lat, lng }, radius: place.famous ? 1000 : 15000,
       preference: google.maps.StreetViewPreference.NEAREST, source: google.maps.StreetViewSource.OUTDOOR }, (data, status) => {
+      if (!gmReady) return resolve(showKeyless(place));  // key failed while we were waiting
       if (status !== google.maps.StreetViewStatus.OK) return resolve(false);
       const loc = data.location.latLng;
       state.cur.actual = { lat: loc.lat(), lng: loc.lng() };
