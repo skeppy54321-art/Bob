@@ -504,7 +504,8 @@ function initMap() {
   const esri = "https://server.arcgisonline.com/ArcGIS/rest/services/";
   L.tileLayer(esri + "World_Imagery/MapServer/tile/{z}/{y}/{x}", {
     maxZoom: 19, maxNativeZoom: 18, attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics"
-  }).addTo(map);
+  }).addTo(map).once("tileerror", () =>
+    note("The map and Street View can't load here. Open the file directly in Chrome (or check your internet).", 10000));
   L.tileLayer(esri + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, maxNativeZoom: 18 }).addTo(map);
   layer = L.layerGroup().addTo(map);
   map.on("click", onMapClick);
