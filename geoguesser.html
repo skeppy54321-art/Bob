@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GeoGuesser</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root { --bg:#14181f; --panel:#1f2630; --line:#2c3541; --fg:#eef1f5; --muted:#9aa5b4; --accent:#3ecf8e; --guess:#4c9aff; --bad:#ff5d5d; --warn:#ffb648; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg);
+    font:15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow:hidden; }
+  button { font:inherit; cursor:pointer; border:0; border-radius:8px; padding:10px 18px;
+    background:var(--accent); color:#06281a; font-weight:700; }
+  button:disabled { background:#3a4350; color:#7d8794; cursor:not-allowed; }
+  button.ghost { background:rgba(20,24,31,.88); color:var(--fg); font-weight:600; padding:7px 12px; font-size:13px; }
+  button.secondary { background:#2f3946; color:var(--fg); }
+  a { color:var(--guess); }
+
+  #view { position:fixed; inset:0; }
+  #view iframe, #pano { width:100%; height:100%; border:0; display:block; }
+  #blocker { position:absolute; inset:0; z-index:5; display:none; }
+  body.nmpz #blocker { display:block; }
+
+  /* Top bar doubles as a cover for the embed's address card */
+  #hud { position:fixed; top:0; left:0; z-index:500; display:flex; gap:6px; align-items:center; flex-wrap:wrap;
+    background:var(--panel); padding:10px 12px; border-bottom-right-radius:12px; min-width:min(380px, 100vw); max-width:100vw; }
+  .chip { background:#141a22; padding:6px 10px; border-radius:7px; font-weight:600; font-size:13px; white-space:nowrap; }
+  .chip.muted { color:var(--muted); font-weight:500; }
+  #timerChip.low { color:var(--bad); }
+  body.result #hud .live { display:none; }
+
+  #mini { position:fixed; right:12px; bottom:12px; z-index:600; width:300px; display:flex; flex-direction:column; gap:8px; }
+  #mapwrap { height:200px; border-radius:10px; overflow:hidden; border:2px solid rgba(255,255,255,.35);
+    opacity:.85; transition:width .15s, height .15s, opacity .15s; width:100%; position:relative; }
+  #mini:hover, #mini.big { width:min(680px, calc(100vw - 24px)); }
+  #mini:hover #mapwrap, #mini.big #mapwrap { height:min(460px, 60vh); opacity:1; }
+  #map { position:absolute; inset:0; background:#0b1a2a; cursor:crosshair; }
+  #guessBtn { width:100%; }
+
+  body.result #view, body.result #guessBtn, body.result #bigToggle { display:none; }
+  body.result #mini, body.result #mini:hover { inset:0; width:auto; }
+  body.result #mapwrap, body.result #mini:hover #mapwrap { width:100%; height:100%; border:0; border-radius:0; opacity:1; }
+  body.result #map { cursor:grab; }
+
+  .dot { width:18px; height:18px; border-radius:50%; border:3px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.5);
+    display:flex; align-items:center; justify-content:center; font:700 9px/1 system-ui; color:#fff; }
+  .dot.guess { background:var(--guess); } .dot.actual { background:var(--accent); color:#06281a; }
+
+  #result { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:700; display:none;
+    background:var(--panel); border-radius:12px; padding:18px 24px; text-align:center; width:min(420px, calc(100vw - 32px));
+    box-shadow:0 8px 30px rgba(0,0,0,.5); }
+  body.result:not(.summary) #result { display:block; }
+  #result h2 { margin:0 0 4px; font-size:28px; } #result p { margin:4px 0; color:var(--muted); }
+  #result .place { color:var(--fg); }
+  .bar { height:8px; background:#141a22; border-radius:4px; overflow:hidden; margin:10px 0 14px; }
+  .bar div { height:100%; background:var(--accent); width:0; transition:width .6s ease-out; }
+
+  .screen { position:fixed; inset:0; z-index:800; background:var(--bg); display:none; align-items:center; justify-content:center; padding:16px; overflow:auto; }
+  .screen.show { display:flex; }
+  #endScreen.summary { background:transparent; pointer-events:none; justify-content:flex-start; align-items:flex-start; }
+  #endScreen.summary .card { pointer-events:auto; box-shadow:0 8px 30px rgba(0,0,0,.5); max-height:calc(100vh - 32px); overflow:auto; }
+  .card { background:var(--panel); border-radius:14px; padding:26px; max-width:460px; width:100%; text-align:center; margin:auto 0; }
+  #endScreen.summary .card { margin:0; }
+  .card h1 { margin:0 0 6px; font-size:32px; } .card > p { color:var(--muted); margin:4px 0 16px; }
+
+  .seg { display:flex; background:#141a22; border-radius:9px; padding:3px; margin-bottom:14px; }
+  .seg button { flex:1; background:transparent; color:var(--muted); padding:8px 6px; font-weight:600; border-radius:7px; }
+  .seg button.on { background:var(--accent); color:#06281a; }
+  .opts { display:grid; grid-template-columns:auto 1fr; gap:8px 12px; align-items:center; text-align:left; margin-bottom:16px; }
+  .opts label { color:var(--muted); font-size:13px; }
+  select, .card input { width:100%; padding:8px; border-radius:6px; border:1px solid #3a4350; background:#141a22; color:var(--fg); font:inherit; }
+  .modeDesc { font-size:13px; color:var(--muted); margin:-6px 0 14px; min-height:2.8em; }
+  .best { margin-top:10px; font-size:13px; color:var(--muted); }
+  .card details { text-align:left; margin-top:16px; color:var(--muted); font-size:13px; }
+  .card details p { margin:6px 0; }
+  #challengeBanner { display:none; background:#16352a; border:1px solid #2b6b52; color:#bff0d9; border-radius:8px; padding:10px; font-size:13px; margin-bottom:14px; }
+
+  #finalScore { font-size:44px; font-weight:800; color:var(--accent); margin:2px 0; }
+  #finalSub { color:var(--muted); margin:0 0 6px; }
+  #pbBadge { display:none; color:var(--warn); font-weight:700; margin-bottom:6px; }
+  #rounds { text-align:left; margin:12px 0 16px; font-size:13px; color:var(--muted); }
+  #rounds div { display:flex; justify-content:space-between; gap:10px; padding:4px 0; border-bottom:1px solid var(--line); }
+  #rounds b { color:var(--fg); font-weight:600; }
+  .row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  #note { position:fixed; left:50%; top:70px; transform:translateX(-50%); z-index:900; background:rgba(20,24,31,.95);
+    padding:8px 14px; border-radius:8px; font-size:13px; display:none; max-width:calc(100vw - 32px); text-align:center; }
+  #loading { position:fixed; inset:0; z-index:400; display:none; align-items:center; justify-content:center; color:var(--muted); background:var(--bg); }
+  body.loading #loading { display:flex; }
+
+  /* Laptop/desktop only: touch devices get a notice instead of the game */
+  #desktopOnly { display:none; position:fixed; inset:0; z-index:2000; background:var(--bg); align-items:center; justify-content:center; padding:24px; text-align:center; }
+  @media (hover:none) and (pointer:coarse) {
+    #desktopOnly { display:flex; }
+    body > :not(#desktopOnly) { display:none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="desktopOnly"><div class="card"><h1>🌍 GeoGuesser</h1><p>This game is made for laptops and desktops. Open it on a computer to play.</p></div></div>
+
+<div id="view"></div>
+<div id="loading">Finding a location…</div>
+
+<div id="hud">
+  <span class="chip muted" id="mapChip"></span>
+  <span class="chip" id="roundChip"></span>
+  <span class="chip" id="scoreChip"></span>
+  <span class="chip" id="timerChip" hidden></span>
+  <button class="ghost live" id="backBtn" title="Return to the starting spot">↺ Start</button>
+  <button class="ghost live" id="skipBtn" title="No imagery? Get a different location">Skip</button>
+  <button class="ghost" id="quitBtn" title="Back to menu">✕</button>
+</div>
+<div id="note"></div>
+
+<div id="mini">
+  <div id="mapwrap"><div id="map"></div></div>
+  <button class="ghost" id="bigToggle">Enlarge map</button>
+  <button id="guessBtn" disabled>Place your pin on the map</button>
+</div>
+
+<div id="result">
+  <h2 id="resTitle"></h2>
+  <p id="resDist"></p>
+  <div class="bar"><div id="resBar"></div></div>
+  <p class="place" id="resPlace"></p>
+  <p><a id="resLink" target="_blank" rel="noopener">Open in Google Maps ↗</a></p>
+  <button id="nextBtn" style="margin-top:10px">Next round</button>
+</div>
+
+<div class="screen show" id="startScreen">
+  <div class="card">
+    <h1>🌍 GeoGuesser</h1>
+    <p>Get dropped somewhere in Street View, work out where you are and pin it on the map.</p>
+    <div id="challengeBanner"></div>
+    <div class="seg" id="modeSeg">
+      <button data-mode="classic" class="on">Classic</button>
+      <button data-mode="streak">Country Streak</button>
+    </div>
+    <div class="modeDesc" id="modeDesc"></div>
+    <div class="opts">
+      <label for="mapSel">Map</label><select id="mapSel"></select>
+      <label for="moveSel">Movement</label>
+      <select id="moveSel">
+        <option value="move">Moving</option>
+        <option value="nomove">No Move (pan &amp; zoom only)</option>
+        <option value="nmpz">NMPZ (no move, pan or zoom)</option>
+      </select>
+      <label for="timeSel">Time limit</label>
+      <select id="timeSel">
+        <option value="0">No limit</option><option value="10">10 seconds</option><option value="30">30 seconds</option>
+        <option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option>
+      </select>
+    </div>
+    <button id="startBtn" style="width:100%">Play</button>
+    <div class="best" id="bestLine"></div>
+    <details id="keyBox">
+      <summary>Google Maps API key (optional)</summary>
+      <p>The game works without a key. A free Google key adds No Move mode, random spots off the main streets and checks that every spot has imagery.</p>
+      <p>Get one free (no credit card) with Google's Maps Demo Key, or from the Google Cloud console with the Maps JavaScript API enabled. It's saved only in this browser.</p>
+      <input id="keyInput" placeholder="AIza..." autocomplete="off" spellcheck="false">
+    </details>
+  </div>
+</div>
+
+<div class="screen" id="endScreen">
+  <div class="card">
+    <h1 id="endTitle">Game over</h1>
+    <div id="pbBadge">★ New personal best!</div>
+    <div id="finalScore">0</div>
+    <p id="finalSub"></p>
+    <div id="rounds"></div>
+    <div class="row">
+      <button id="againBtn">Play again</button>
+      <button class="secondary" id="challengeBtn">Challenge link</button>
+      <button class="secondary" id="menuBtn">Menu</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script>
+// ---------- Locations ----------
+// Country names match the world-atlas dataset (used for Country Streak). "*" marks famous places.
+const DATA = {
+  "United Kingdom": [["*Big Ben, London",51.5007,-0.1246],["*Tower Bridge, London",51.5055,-0.0754],["*Stonehenge",51.1789,-1.8262],["Edinburgh",55.9533,-3.1883],["Manchester",53.4808,-2.2426],["Cardiff",51.4816,-3.1791],["Belfast",54.5973,-5.9301],["York",53.9590,-1.0815],["Inverness",57.4778,-4.2247],["Bath",51.3811,-2.3590]],
+  "Ireland": [["Dublin",53.3498,-6.2603],["Galway",53.2707,-9.0568],["Cork",51.8985,-8.4756]],
+  "France": [["*Eiffel Tower, Paris",48.8584,2.2945],["*Mont-Saint-Michel",48.6361,-1.5115],["Lyon",45.7640,4.8357],["Marseille",43.2965,5.3698],["Bordeaux",44.8378,-0.5792],["Strasbourg",48.5734,7.7521],["Nice",43.7102,7.2620],["Toulouse",43.6047,1.4442],["Rennes",48.1173,-1.6778],["Chamonix",45.9237,6.8694]],
+  "Spain": [["Madrid",40.4169,-3.7035],["*Sagrada Família, Barcelona",41.4036,2.1744],["Seville",37.3891,-5.9845],["Valencia",39.4699,-0.3763],["Bilbao",43.2630,-2.9350],["Granada",37.1773,-3.5986],["Palma de Mallorca",39.5696,2.6502]],
+  "Portugal": [["Lisbon",38.7223,-9.1393],["Porto",41.1579,-8.6291],["Faro",37.0194,-7.9322]],
+  "Italy": [["*Colosseum, Rome",41.8902,12.4922],["*St Mark's Square, Venice",45.4341,12.3388],["*Leaning Tower of Pisa",43.7230,10.3966],["Milan",45.4642,9.1900],["Florence",43.7696,11.2558],["Naples",40.8518,14.2681],["Palermo",38.1157,13.3615],["Bologna",44.4949,11.3426],["Turin",45.0703,7.6869]],
+  "Germany": [["*Brandenburg Gate, Berlin",52.5163,13.3777],["*Neuschwanstein Castle",47.5576,10.7498],["Munich",48.1374,11.5755],["Hamburg",53.5511,9.9937],["Cologne",50.9375,6.9603],["Frankfurt",50.1109,8.6821],["Dresden",51.0504,13.7373],["Leipzig",51.3397,12.3731]],
+  "Netherlands": [["Amsterdam",52.3676,4.9041],["Rotterdam",51.9244,4.4777],["Utrecht",52.0907,5.1214],["Groningen",53.2194,6.5665]],
+  "Belgium": [["Brussels",50.8467,4.3525],["Bruges",51.2093,3.2247],["Antwerp",51.2194,4.4025]],
+  "Luxembourg": [["Luxembourg City",49.6116,6.1319]],
+  "Switzerland": [["Zurich",47.3769,8.5417],["Geneva",46.2044,6.1432],["*Zermatt (Matterhorn)",46.0207,7.7491],["Lucerne",47.0502,8.3093]],
+  "Austria": [["Vienna",48.2082,16.3738],["Salzburg",47.8095,13.0550],["Innsbruck",47.2692,11.4041]],
+  "Czechia": [["*Old Town Square, Prague",50.0875,14.4213],["Brno",49.1951,16.6068]],
+  "Poland": [["Warsaw",52.2297,21.0122],["Kraków",50.0647,19.9450],["Gdańsk",54.3520,18.6466],["Wrocław",51.1079,17.0385]],
+  "Slovakia": [["Bratislava",48.1486,17.1077]],
+  "Hungary": [["Budapest",47.4979,19.0402],["Debrecen",47.5316,21.6273]],
+  "Slovenia": [["Ljubljana",46.0569,14.5058],["Bled",46.3625,14.0938]],
+  "Croatia": [["Zagreb",45.8150,15.9819],["Split",43.5081,16.4402],["Dubrovnik",42.6507,18.0944]],
+  "Serbia": [["Belgrade",44.7866,20.4489],["Novi Sad",45.2671,19.8335]],
+  "Montenegro": [["Kotor",42.4247,18.7712],["Podgorica",42.4304,19.2594]],
+  "Albania": [["Tirana",41.3275,19.8187]],
+  "Macedonia": [["Skopje",41.9981,21.4254]],
+  "Bulgaria": [["Sofia",42.6977,23.3219],["Plovdiv",42.1354,24.7453],["Varna",43.2141,27.9147]],
+  "Romania": [["Bucharest",44.4268,26.1025],["Cluj-Napoca",46.7712,23.6236],["Brașov",45.6427,25.5887]],
+  "Greece": [["*Acropolis, Athens",37.9700,23.7250],["Thessaloniki",40.6401,22.9444],["Heraklion",35.3387,25.1442],["*Oia, Santorini",36.4618,25.3753]],
+  "Turkey": [["Istanbul",41.0082,28.9784],["Ankara",39.9334,32.8597],["Izmir",38.4237,27.1428],["Antalya",36.8969,30.7133]],
+  "Ukraine": [["Kyiv",50.4501,30.5234],["Lviv",49.8397,24.0297],["Odesa",46.4825,30.7233]],
+  "Russia": [["*Red Square, Moscow",55.7539,37.6208],["Saint Petersburg",59.9343,30.3351],["Kazan",55.7963,49.1088],["Vladivostok",43.1155,131.8855],["Irkutsk",52.2870,104.3050],["Novosibirsk",55.0084,82.9357]],
+  "Lithuania": [["Vilnius",54.6872,25.2797],["Kaunas",54.8985,23.9036]],
+  "Latvia": [["Riga",56.9496,24.1052]],
+  "Estonia": [["Tallinn",59.4370,24.7536],["Tartu",58.3776,26.7290]],
+  "Finland": [["Helsinki",60.1699,24.9384],["Rovaniemi",66.5039,25.7294],["Tampere",61.4978,23.7610]],
+  "Sweden": [["Stockholm",59.3293,18.0686],["Gothenburg",57.7089,11.9746],["Malmö",55.6050,13.0038],["Kiruna",67.8558,20.2253]],
+  "Norway": [["Oslo",59.9139,10.7522],["Bergen",60.3913,5.3221],["Tromsø",69.6492,18.9553],["Reine, Lofoten",67.9323,13.0887]],
+  "Denmark": [["Copenhagen",55.6761,12.5683],["Aarhus",56.1629,10.2039]],
+  "Iceland": [["Reykjavík",64.1466,-21.9426],["Vík",63.4186,-19.0060],["Akureyri",65.6885,-18.1262]],
+  "Faeroe Is.": [["Tórshavn",62.0107,-6.7716]],
+  "Malta": [["Valletta",35.8989,14.5146]],
+  "Andorra": [["Andorra la Vella",42.5063,1.5218]],
+  "Monaco": [["Monaco",43.7384,7.4246]],
+  "Cyprus": [["Limassol",34.7071,33.0226]],
+  "Japan": [["*Shibuya Crossing, Tokyo",35.6595,139.7005],["*Lake Kawaguchi (Mt Fuji)",35.5170,138.7516],["Kyoto",35.0116,135.7681],["Osaka",34.6937,135.5023],["Sapporo",43.0618,141.3545],["Hiroshima",34.3853,132.4553],["Fukuoka",33.5902,130.4017],["Nagoya",35.1815,136.9066],["Naha, Okinawa",26.2124,127.6809],["Kanazawa",36.5613,136.6562]],
+  "South Korea": [["Seoul",37.5665,126.9780],["Busan",35.1796,129.0756]],
+  "Taiwan": [["Taipei",25.0330,121.5654],["Kaohsiung",22.6273,120.3014],["Tainan",22.9997,120.2270]],
+  "Hong Kong": [["Hong Kong",22.2819,114.1580]],
+  "Macao": [["Macau",22.1987,113.5439]],
+  "Mongolia": [["Ulaanbaatar",47.9184,106.9177]],
+  "Thailand": [["Bangkok",13.7563,100.5018],["Chiang Mai",18.7883,98.9853],["Phuket",7.8804,98.3923]],
+  "Cambodia": [["Phnom Penh",11.5564,104.9282],["*Angkor Wat",13.4125,103.8670]],
+  "Laos": [["Vientiane",17.9757,102.6331]],
+  "Vietnam": [["Hanoi",21.0285,105.8542],["Ho Chi Minh City",10.7769,106.7009]],
+  "Malaysia": [["Kuala Lumpur",3.1390,101.6869],["George Town, Penang",5.4141,100.3288],["Kota Kinabalu",5.9804,116.0735]],
+  "Singapore": [["*Marina Bay, Singapore",1.2834,103.8607]],
+  "Indonesia": [["Jakarta",-6.2088,106.8456],["Denpasar, Bali",-8.6705,115.2126],["Yogyakarta",-7.7956,110.3695],["Bandung",-6.9175,107.6191]],
+  "Philippines": [["Manila",14.5995,120.9842],["Cebu City",10.3157,123.8854],["Davao",7.1907,125.4553]],
+  "India": [["New Delhi",28.6139,77.2090],["*Gateway of India, Mumbai",18.9220,72.8347],["*Taj Mahal, Agra",27.1751,78.0421],["Bangalore",12.9716,77.5946],["Kolkata",22.5726,88.3639],["Jaipur",26.9124,75.7873],["Chennai",13.0827,80.2707]],
+  "Sri Lanka": [["Colombo",6.9271,79.8612],["Kandy",7.2906,80.6337]],
+  "Bangladesh": [["Dhaka",23.8103,90.4125]],
+  "Nepal": [["Kathmandu",27.7172,85.3240]],
+  "Bhutan": [["Thimphu",27.4728,89.6390]],
+  "Kazakhstan": [["Almaty",43.2389,76.8897],["Astana",51.1694,71.4491]],
+  "Kyrgyzstan": [["Bishkek",42.8746,74.5698]],
+  "Israel": [["Tel Aviv",32.0853,34.7818],["Haifa",32.7940,34.9896]],
+  "Jordan": [["Amman",31.9454,35.9284],["*Petra",30.3285,35.4444]],
+  "United Arab Emirates": [["*Burj Khalifa, Dubai",25.1972,55.2744],["Abu Dhabi",24.4539,54.3773]],
+  "Qatar": [["Doha",25.2854,51.5310]],
+  "Lebanon": [["Beirut",33.8938,35.5018]],
+  "United States of America": [["*Times Square, New York",40.7580,-73.9855],["*Statue of Liberty view, New York",40.7033,-74.0170],["*Golden Gate Bridge",37.8199,-122.4783],["*Las Vegas Strip",36.1147,-115.1728],["*Grand Canyon",36.0619,-112.1077],["Chicago",41.8781,-87.6298],["Los Angeles",34.0522,-118.2437],["Seattle",47.6062,-122.3321],["Miami",25.7617,-80.1918],["Austin",30.2672,-97.7431],["Denver",39.7392,-104.9903],["New Orleans",29.9511,-90.0715],["Boston",42.3601,-71.0589],["Phoenix",33.4484,-112.0740],["Nashville",36.1627,-86.7816],["Atlanta",33.7490,-84.3880],["Washington, D.C.",38.8977,-77.0365],["Portland",45.5152,-122.6784],["Salt Lake City",40.7608,-111.8910],["Minneapolis",44.9778,-93.2650],["Anchorage",61.2181,-149.9003],["Honolulu",21.2766,-157.8265],["Santa Fe",35.6870,-105.9378],["Savannah",32.0809,-81.0912],["Bozeman",45.6770,-111.0429],["Burlington",44.4759,-73.2121],["Kansas City",39.0997,-94.5786],["Detroit",42.3314,-83.0458],["San Diego",32.7157,-117.1611],["Moab",38.5733,-109.5498],["Key West",24.5551,-81.7800],["Fargo",46.8772,-96.7898],["Amarillo",35.2220,-101.8313]],
+  "Canada": [["Toronto",43.6532,-79.3832],["Vancouver",49.2827,-123.1207],["Montreal",45.5017,-73.5673],["Calgary",51.0447,-114.0719],["Québec City",46.8139,-71.2080],["Halifax",44.6488,-63.5752],["Winnipeg",49.8951,-97.1384],["Banff",51.1784,-115.5708],["St. John's",47.5615,-52.7126],["Whitehorse",60.7212,-135.0568],["*Niagara Falls",43.0896,-79.0849]],
+  "Mexico": [["Mexico City",19.4326,-99.1332],["Guadalajara",20.6597,-103.3496],["Cancún",21.1619,-86.8515],["Oaxaca",17.0732,-96.7266],["Monterrey",25.6866,-100.3161],["Mérida",20.9674,-89.5926],["Tijuana",32.5149,-117.0382]],
+  "Guatemala": [["Guatemala City",14.6349,-90.5069],["Antigua Guatemala",14.5586,-90.7295]],
+  "Costa Rica": [["San José",9.9281,-84.0907]],
+  "Panama": [["Panama City",8.9824,-79.5199]],
+  "Dominican Rep.": [["Santo Domingo",18.4861,-69.9312]],
+  "Puerto Rico": [["San Juan",18.4655,-66.1057]],
+  "Greenland": [["Nuuk",64.1814,-51.6941]],
+  "Brazil": [["*Copacabana, Rio de Janeiro",-22.9711,-43.1822],["*Christ the Redeemer, Rio",-22.9519,-43.2105],["São Paulo",-23.5505,-46.6333],["Brasília",-15.7939,-47.8828],["Salvador",-12.9714,-38.5014],["Florianópolis",-27.5954,-48.5480],["Manaus",-3.1190,-60.0217],["Curitiba",-25.4284,-49.2733],["Recife",-8.0476,-34.8770],["Porto Alegre",-30.0346,-51.2177],["Belo Horizonte",-19.9167,-43.9345]],
+  "Argentina": [["Buenos Aires",-34.6037,-58.3816],["Mendoza",-32.8895,-68.8458],["Bariloche",-41.1335,-71.3103],["Ushuaia",-54.8019,-68.3030],["Córdoba",-31.4201,-64.1888],["Salta",-24.7821,-65.4232],["El Calafate",-50.3379,-72.2648]],
+  "Chile": [["Santiago",-33.4489,-70.6693],["Valparaíso",-33.0472,-71.6127],["Punta Arenas",-53.1638,-70.9171],["San Pedro de Atacama",-22.9087,-68.1997],["Puerto Montt",-41.4689,-72.9411]],
+  "Uruguay": [["Montevideo",-34.9011,-56.1645],["Punta del Este",-34.9475,-54.9338]],
+  "Paraguay": [["Asunción",-25.2637,-57.5759]],
+  "Bolivia": [["La Paz",-16.4897,-68.1193],["Santa Cruz de la Sierra",-17.7833,-63.1821]],
+  "Peru": [["Lima",-12.0464,-77.0428],["Cusco",-13.5320,-71.9675],["Arequipa",-16.4090,-71.5375],["*Machu Picchu",-13.1631,-72.5450]],
+  "Ecuador": [["Quito",-0.1807,-78.4678],["Guayaquil",-2.1710,-79.9224],["Cuenca",-2.9001,-79.0059]],
+  "Colombia": [["Bogotá",4.7110,-74.0721],["Medellín",6.2442,-75.5812],["Cartagena",10.3910,-75.4794],["Cali",3.4516,-76.5320]],
+  "South Africa": [["Cape Town",-33.9249,18.4241],["*Table Mountain, Cape Town",-33.9483,18.4031],["Johannesburg",-26.2041,28.0473],["Durban",-29.8587,31.0218],["Gqeberha",-33.9608,25.6022],["Pretoria",-25.7479,28.2293],["Stellenbosch",-33.9321,18.8602],["Bloemfontein",-29.0852,26.1596]],
+  "Botswana": [["Gaborone",-24.6282,25.9231],["Maun",-19.9833,23.4167]],
+  "Lesotho": [["Maseru",-29.3151,27.4869]],
+  "eSwatini": [["Mbabane",-26.3054,31.1367]],
+  "Kenya": [["Nairobi",-1.2921,36.8219],["Mombasa",-4.0435,39.6682]],
+  "Uganda": [["Kampala",0.3476,32.5825]],
+  "Rwanda": [["Kigali",-1.9441,30.0619]],
+  "Ghana": [["Accra",5.6037,-0.1870],["Kumasi",6.6885,-1.6244]],
+  "Nigeria": [["Lagos",6.4541,3.3947],["Abuja",9.0765,7.3986]],
+  "Senegal": [["Dakar",14.7167,-17.4677]],
+  "Tunisia": [["Tunis",36.8065,10.1815],["Sousse",35.8256,10.6369]],
+  "Madagascar": [["Antananarivo",-18.8792,47.5079]],
+  "Australia": [["*Sydney Opera House",-33.8568,151.2153],["*Uluru",-25.3444,131.0369],["Melbourne",-37.8136,144.9631],["Brisbane",-27.4698,153.0251],["Perth",-31.9505,115.8605],["Adelaide",-34.9285,138.6007],["Hobart",-42.8821,147.3272],["Darwin",-12.4634,130.8456],["Cairns",-16.9186,145.7781],["Alice Springs",-23.6980,133.8807],["Canberra",-35.2809,149.1300],["Broome",-17.9614,122.2359]],
+  "New Zealand": [["Auckland",-36.8485,174.7633],["Wellington",-41.2866,174.7756],["Christchurch",-43.5321,172.6362],["Queenstown",-45.0312,168.6626],["Rotorua",-38.1368,176.2497],["Dunedin",-45.8788,170.5028]],
+  "Guam": [["Hagåtña",13.4443,144.7937]]
+};
+
+const REGION = {
+  "Europe": ["United Kingdom","Ireland","France","Spain","Portugal","Italy","Germany","Netherlands","Belgium","Luxembourg","Switzerland","Austria","Czechia","Poland","Slovakia","Hungary","Slovenia","Croatia","Serbia","Montenegro","Albania","Macedonia","Bulgaria","Romania","Greece","Turkey","Ukraine","Russia","Lithuania","Latvia","Estonia","Finland","Sweden","Norway","Denmark","Iceland","Faeroe Is.","Malta","Andorra","Monaco","Cyprus"],
+  "Asia": ["Japan","South Korea","Taiwan","Hong Kong","Macao","Mongolia","Thailand","Cambodia","Laos","Vietnam","Malaysia","Singapore","Indonesia","Philippines","India","Sri Lanka","Bangladesh","Nepal","Bhutan","Kazakhstan","Kyrgyzstan","Israel","Jordan","United Arab Emirates","Qatar","Lebanon"],
+  "North America": ["United States of America","Canada","Mexico","Guatemala","Costa Rica","Panama","Dominican Rep.","Puerto Rico","Greenland"],
+  "South America": ["Brazil","Argentina","Chile","Uruguay","Paraguay","Bolivia","Peru","Ecuador","Colombia"],
+  "Africa": ["South Africa","Botswana","Lesotho","eSwatini","Kenya","Uganda","Rwanda","Ghana","Nigeria","Senegal","Tunisia","Madagascar"],
+  "Oceania": ["Australia","New Zealand","Guam"]
+};
+
+const PRETTY = { "United States of America":"United States", "Dominican Rep.":"Dominican Republic", "Faeroe Is.":"Faroe Islands",
+  "Macedonia":"North Macedonia", "eSwatini":"Eswatini", "Bosnia and Herz.":"Bosnia and Herzegovina", "Central African Rep.":"Central African Republic",
+  "Dem. Rep. Congo":"DR Congo", "Eq. Guinea":"Equatorial Guinea", "S. Sudan":"South Sudan", "W. Sahara":"Western Sahara", "Solomon Is.":"Solomon Islands",
+  "Falkland Is.":"Falkland Islands", "N. Cyprus":"Northern Cyprus", "Antigua and Barb.":"Antigua and Barbuda", "Marshall Is.":"Marshall Islands" };
+const pretty = c => PRETTY[c] || c;
+
+const PLACES = [];
+for (const [country, list] of Object.entries(DATA))
+  for (const [raw, lat, lng] of list)
+    PLACES.push({ name: raw.replace(/^\*/, ""), famous: raw[0] === "*", lat, lng, country });
+
+// Maps: world, famous, continents, then any country with 5+ spots
+const MAPS = [
+  { id: "world", name: "World", filter: () => true },
+  { id: "famous", name: "Famous Places", filter: p => p.famous },
+  ...Object.keys(REGION).map(r => ({ id: r.toLowerCase().replace(/ /g, "-"), name: r, filter: p => REGION[r].includes(p.country) })),
+  ...Object.keys(DATA).filter(c => DATA[c].length >= 5).sort((a, b) => pretty(a).localeCompare(pretty(b)))
+     .map(c => ({ id: "c-" + c, name: pretty(c), country: true, filter: p => p.country === c }))
+];
+
+const ROUNDS = 5, MAX_PTS = 5000;
+const KEY_STORE = "geoguesser.gmapsKey";
+const $ = id => document.getElementById(id);
+
+let settings = { mode: "classic", map: "world", move: "move", time: 0 };
+let state = null, challenge = null;
+let map, layer, guessMarker = null, selLayer = null, bordersLayer = null;
+let gmReady = false, gmLoading = null, panorama = null, svService = null;
+let countries = null, countriesLoading = null, timerId = null;
+
+// ---------- Helpers ----------
+const rad = d => d * Math.PI / 180;
+function distanceKm(a, b) {
+  const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat/2)**2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng/2)**2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
+}
+const scoreFor = km => Math.round(MAX_PTS * Math.exp(-km / 1492.7));
+const fmtKm = km => km < 1 ? Math.round(km * 1000) + " m" : km < 10 ? km.toFixed(1) + " km" : Math.round(km).toLocaleString() + " km";
+const wrapLng = lng => ((lng + 540) % 360) - 180;
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function shuffle(a, rnd) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function note(msg, ms = 3500) { const n = $("note"); n.textContent = msg; n.style.display = "block"; clearTimeout(note.t); note.t = setTimeout(() => n.style.display = "none", ms); }
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+const mapById = id => MAPS.find(m => m.id === id) || MAPS[0];
+const bestKey = s => "geoguesser.best:" + [s.mode, s.map, s.move, s.time].join(":");
+const MOVE_NAMES = { move: "Moving", nomove: "No Move", nmpz: "NMPZ" };
+function settingsLabel(s) {
+  return [s.mode === "streak" ? "Country Streak" : "Classic", mapById(s.map).name, MOVE_NAMES[s.move],
+    s.time ? (s.time < 60 ? s.time + "s" : s.time / 60 + " min") : "No time limit"].join(" · ");
+}
+
+// ---------- Countries (for Country Streak) ----------
+function loadCountries() {
+  if (countries) return Promise.resolve(countries);
+  if (!countriesLoading) countriesLoading = fetch("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json")
+    .then(r => r.json())
+    .then(topo => {
+      countries = topojson.feature(topo, topo.objects.countries).features.map(f => {
+        const raw = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
+        const polys = raw.map(p => p.map(unwrapRing));
+        let b = [Infinity, 90, -Infinity, -90];
+        for (const p of polys) for (const [x, y] of p[0]) b = [Math.min(b[0], x), Math.min(b[1], y), Math.max(b[2], x), Math.max(b[3], y)];
+        return { name: f.properties.name, feature: f, polys, bbox: b };
+      });
+      return countries;
+    })
+    .catch(e => { countriesLoading = null; throw e; });
+  return countriesLoading;
+}
+// Rings that cross the antimeridian jump 360° in longitude; make them continuous
+function unwrapRing(ring) {
+  const out = [ring[0]];
+  for (let i = 1; i < ring.length; i++) {
+    let x = ring[i][0];
+    const px = out[i - 1][0];
+    while (x - px > 180) x -= 360;
+    while (x - px < -180) x += 360;
+    out.push([x, ring[i][1]]);
+  }
+  return out;
+}
+function inRing(x, y, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function countryAt(lat, lng) {
+  if (!countries) return null;
+  lng = wrapLng(lng);
+  // Antarctica's ring wraps the pole, which ray casting can't handle; south of 60°S is Antarctica anyway
+  if (lat < -60) return countries.find(c => c.name === "Antarctica") || null;
+  for (const c of countries) {
+    const b = c.bbox;
+    if (lat < b[1] || lat > b[3]) continue;
+    for (const x of [lng, lng - 360, lng + 360]) {
+      if (x < b[0] || x > b[2]) continue;
+      for (const p of c.polys) if (inRing(x, lat, p[0]) && !p.slice(1).some(h => inRing(x, lat, h))) return c;
+    }
+  }
+  return null;
+}
+
+// ---------- Google Maps JS API (optional) ----------
+function currentKey() { return $("keyInput").value.trim(); }
+function loadGoogle(key) {
+  if (gmReady) return Promise.resolve(true);
+  if (gmLoading) return gmLoading;
+  gmLoading = new Promise(resolve => {
+    window.gm_authFailure = () => keyFailed("InvalidKeyMapError");
+    // Billing and API-not-enabled problems only show up as console errors (plus "development
+    // purposes only" imagery), so watch for them and fall back to keyless Street View.
+    const origError = console.error;
+    console.error = function (...args) {
+      const m = String(args[0]).match(/\b(\w+MapError)\b/);
+      if (m) keyFailed(m[1]);
+      return origError.apply(this, args);
+    };
+    window.__gmInit = () => { gmReady = true; svService = new google.maps.StreetViewService(); resolve(true); };
+    const s = document.createElement("script");
+    s.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(key) + "&callback=__gmInit";
+    s.onerror = () => { note("Couldn't load Google Maps — using keyless Street View."); resolve(false); };
+    document.head.appendChild(s);
+  });
+  return gmLoading;
+}
+
+const KEY_ERRORS = {
+  BillingNotEnabledMapError: "Your Google key's project needs billing turned on in Google Cloud",
+  ApiNotActivatedMapError: "Your Google key needs the Maps JavaScript API turned on",
+  RefererNotAllowedMapError: "Your Google key is restricted to other websites",
+  ExpiredKeyMapError: "Your Google key has expired"
+};
+function keyFailed(code) {
+  if (keyFailed.done) return;
+  keyFailed.done = true;
+  gmReady = false;
+  note((KEY_ERRORS[code] || "Your Google key was rejected") + " — switched to free Street View.", 9000);
+  if (state && state.phase === "guess") showKeyless(state.cur.place);
+}
+
+// ---------- Street View ----------
+function setNmpz(on) { document.body.classList.toggle("nmpz", on); }
+
+// Keyless: Google's public Street View embed. Cross-origin, so its location can't be read from the page.
+function showKeyless(place) {
+  panorama = null;
+  const heading = Math.floor(state.rnd() * 360);
+  const src = "https://maps.google.com/maps?layer=c&cbll=" + place.lat + "," + place.lng +
+    "&cbp=12," + heading + ",0,0,0&source=embed&output=svembed";
+  $("view").innerHTML = '<iframe title="Street View" allowfullscreen referrerpolicy="no-referrer"></iframe><div id="blocker"></div>';
+  $("view").firstChild.src = src;
+  // The embed can't lock movement, so keyless No Move still lets you pan and move; only NMPZ blocks input
+  setNmpz(settings.move === "nmpz");
+  state.cur.actual = { lat: place.lat, lng: place.lng };
+  state.cur.exact = true;
+  return true;
+}
+
+function showWithKey(place) {
+  // Jitter non-landmark spots so you land on random streets around each seed
+  const jitter = place.famous ? 0 : 0.25;
+  const lat = place.lat + (state.rnd() - 0.5) * 2 * jitter;
+  const lng = place.lng + (state.rnd() - 0.5) * 2 * jitter / Math.max(0.2, Math.cos(rad(place.lat)));
+  const heading = state.rnd() * 360;
+  return new Promise(resolve => {
+    svService.getPanorama({ location: { lat, lng }, radius: place.famous ? 1000 : 15000,
+      preference: google.maps.StreetViewPreference.NEAREST, source: google.maps.StreetViewSource.OUTDOOR }, (data, status) => {
+      if (!gmReady) return resolve(showKeyless(place));  // key failed while we were waiting
+      if (status !== google.maps.StreetViewStatus.OK) return resolve(false);
+      const loc = data.location.latLng;
+      state.cur.actual = { lat: loc.lat(), lng: loc.lng() };
+      state.cur.exact = place.famous;
+      state.cur.startPano = data.location.pano;
+      $("view").innerHTML = '<div id="pano"></div><div id="blocker"></div>';
+      const fixed = settings.move !== "move", nmpz = settings.move === "nmpz";
+      panorama = new google.maps.StreetViewPanorama($("pano"), {
+        pano: data.location.pano, pov: { heading, pitch: 0 }, zoom: 0,
+        addressControl: false, showRoadLabels: false, fullscreenControl: false, motionTracking: false,
+        motionTrackingControl: false, enableCloseButton: false,
+        linksControl: !fixed, clickToGo: !fixed, keyboardShortcuts: !fixed, disableDoubleClickZoom: fixed,
+        panControl: !nmpz, zoomControl: !nmpz, scrollwheel: !nmpz
+      });
+      setNmpz(nmpz);
+      resolve(true);
+    });
+  });
+}
+
+function nextPlace() {
+  if (!state.queue.length) state.queue = shuffle(state.pool.slice(), state.rnd);
+  return state.queue.shift();
+}
+
+async function showLocation() {
+  for (let tries = 0; tries < 10; tries++) {
+    const place = nextPlace();
+    state.cur.place = place;
+    const ok = gmReady ? await showWithKey(place) : showKeyless(place);
+    if (ok) {
+      state.cur.country = place.country;
+      if (gmReady && !state.cur.exact) {
+        const c = countryAt(state.cur.actual.lat, state.cur.actual.lng);
+        if (c) state.cur.country = c.name;
+      }
+      return true;
+    }
+  }
+  note("Couldn't find Street View here — check your connection.");
+  return false;
+}
+
+// ---------- Map ----------
+function dot(cls, label = "") {
+  return L.divIcon({ className: "", html: '<div class="dot ' + cls + '">' + label + '</div>', iconSize: [18, 18], iconAnchor: [9, 9] });
+}
+
+function initMap() {
+  map = L.map("map", { worldCopyJump: true, zoomControl: false, minZoom: 1 }).setView([20, 10], 1);
+  // Esri World Imagery satellite tiles, with borders and place names on top (free, no key)
+  const esri = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+  L.tileLayer(esri + "World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19, maxNativeZoom: 18, attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics"
+  }).addTo(map).once("tileerror", () =>
+    note("The map and Street View can't load here. Open the file directly in Chrome (or check your internet).", 10000));
+  L.tileLayer(esri + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, maxNativeZoom: 18 }).addTo(map);
+  layer = L.layerGroup().addTo(map);
+  map.on("click", onMapClick);
+  new ResizeObserver(() => map.invalidateSize()).observe($("mapwrap"));
+}
+
+function onMapClick(e) {
+  if (!state || state.phase !== "guess") return;
+  const g = { lat: e.latlng.lat, lng: wrapLng(e.latlng.lng) };
+  if (settings.mode === "streak") {
+    const c = countryAt(g.lat, g.lng);
+    if (selLayer) { layer.removeLayer(selLayer); selLayer = null; }
+    if (!c) { state.cur.guess = null; setGuessBtn(false, "Click on a country"); return; }
+    selLayer = L.geoJSON(c.feature, { style: { color: "#4c9aff", weight: 2, fillOpacity: .35 }, interactive: false }).addTo(layer);
+    state.cur.guess = g; state.cur.guessCountry = c.name;
+    setGuessBtn(true, "Guess: " + pretty(c.name));
+  } else {
+    state.cur.guess = g;
+    setGuessBtn(true, "Guess");
+  }
+  if (guessMarker) guessMarker.setLatLng(e.latlng);
+  else guessMarker = L.marker(e.latlng, { icon: dot("guess"), interactive: false }).addTo(layer);
+}
+
+function setGuessBtn(enabled, text) { $("guessBtn").disabled = !enabled; $("guessBtn").textContent = text; }
+
+function showBorders(on) {
+  if (on && countries && !bordersLayer)
+    bordersLayer = L.geoJSON(countries.map(c => c.feature), { style: { color: "#fff", weight: .8, opacity: .6, fill: false }, interactive: false });
+  if (bordersLayer) on ? bordersLayer.addTo(map) : bordersLayer.remove();
+}
+
+// ---------- Timer ----------
+function startTimer() {
+  stopTimer();
+  if (!settings.time) { $("timerChip").hidden = true; return; }
+  const deadline = Date.now() + settings.time * 1000;
+  $("timerChip").hidden = false;
+  const tick = () => {
+    const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+    $("timerChip").textContent = "⏱ " + Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
+    $("timerChip").classList.toggle("low", left <= 10);
+    if (left <= 0) { stopTimer(); submitGuess(true); }
+  };
+  tick();
+  timerId = setInterval(tick, 250);
+}
+function stopTimer() { clearInterval(timerId); timerId = null; }
+
+// ---------- Game flow ----------
+function updateHud() {
+  $("mapChip").textContent = mapById(settings.map).name;
+  $("roundChip").textContent = settings.mode === "streak" ? "Round " + state.round : "Round " + state.round + " / " + ROUNDS;
+  $("scoreChip").textContent = settings.mode === "streak" ? "🔥 Streak " + state.streak : "Score " + state.total.toLocaleString();
+}
+
+async function startGame(s, seed) {
+  settings = { ...s };
+  $("startScreen").classList.remove("show");
+  $("endScreen").classList.remove("show", "summary");
+  document.body.classList.remove("result", "summary");
+  document.body.classList.add("loading");
+  if (!map) initMap();
+
+  const key = currentKey();
+  lsSet(KEY_STORE, key);
+  if (key) await loadGoogle(key);
+  if (settings.mode === "streak" || gmReady) {
+    try { await loadCountries(); }
+    catch (e) {
+      if (settings.mode === "streak") { note("Couldn't load the country map — check your connection."); document.body.classList.remove("loading"); return showMenu(); }
+    }
+  }
+  if (settings.move === "nomove" && !gmReady) note("No Move needs a working API key — you can look around and move freely this game.", 6000);
+
+  const rnd = mulberry32(seed);
+  const pool = PLACES.filter(mapById(settings.map).filter);
+  state = { seed, rnd, pool, queue: shuffle(pool.slice(), rnd), round: 1, total: 0, streak: 0, history: [], phase: "loading", cur: null };
+  showBorders(settings.mode === "streak");
+  startRound();
+}
+
+async function startRound() {
+  state.phase = "loading";
+  state.cur = { guess: null };
+  document.body.classList.remove("result");
+  document.body.classList.add("loading");
+  layer.clearLayers(); guessMarker = null; selLayer = null;
+  setGuessBtn(false, settings.mode === "streak" ? "Click on a country" : "Place your pin on the map");
+  $("mini").classList.remove("big"); $("bigToggle").textContent = "Enlarge map";
+  $("timerChip").hidden = true;
+  updateHud();
+  map.invalidateSize(); map.setView([20, 10], 1);
+  const ok = await showLocation();
+  document.body.classList.remove("loading");
+  if (!ok) return;
+  state.phase = "guess";
+  startTimer();
+}
+
+function submitGuess(timedOut) {
+  if (!state || state.phase !== "guess") return;
+  if (!timedOut && !state.cur.guess) return;
+  stopTimer();
+  state.phase = "result";
+  const cur = state.cur, a = cur.actual, g = cur.guess;
+  cur.timedOut = timedOut && !g;
+  const placeText = (cur.exact ? "" : "Near ") + cur.place.name + ", " + pretty(cur.country);
+  $("resPlace").textContent = placeText;
+  $("resLink").href = "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + a.lat + "," + a.lng;
+
+  if (settings.mode === "streak") {
+    cur.correct = !!g && cur.guessCountry === cur.country;
+    if (cur.correct) state.streak++;
+    $("resTitle").textContent = cur.correct ? "✅ Correct!" : cur.timedOut ? "⏱ Time's up!" : "❌ Wrong country";
+    $("resTitle").style.color = cur.correct ? "var(--accent)" : "var(--bad)";
+    $("resDist").textContent = cur.correct ? "Streak: " + state.streak
+      : (g ? "You guessed " + pretty(cur.guessCountry) + " — it was " + pretty(cur.country) : "It was " + pretty(cur.country));
+    $("resBar").parentElement.style.display = "none";
+    $("nextBtn").textContent = cur.correct ? "Next round" : "See results";
+    const actualC = countries && countries.find(c => c.name === cur.country);
+    let bounds = L.latLngBounds([a, a]);
+    if (actualC) {
+      const l = L.geoJSON(actualC.feature, { style: { color: "#3ecf8e", weight: 2, fillOpacity: .35 }, interactive: false }).addTo(layer);
+      bounds = l.getBounds();
+    }
+    if (g) bounds.extend(g);
+    finishResult(bounds, 6);
+  } else {
+    cur.km = g ? distanceKm(g, a) : null;
+    cur.pts = g ? scoreFor(cur.km) : 0;
+    state.total += cur.pts;
+    $("resTitle").textContent = (cur.timedOut ? "⏱ Time's up! " : "") + "+" + cur.pts.toLocaleString() + " points";
+    $("resTitle").style.color = "";
+    $("resDist").textContent = g ? "Your guess was " + fmtKm(cur.km) + " from the correct location" : "You didn't place a pin";
+    $("resBar").parentElement.style.display = "";
+    $("resBar").style.width = "0";
+    requestAnimationFrame(() => requestAnimationFrame(() => $("resBar").style.width = (cur.pts / MAX_PTS * 100) + "%"));
+    $("nextBtn").textContent = state.round >= ROUNDS ? "See results" : "Next round";
+    let bounds = L.latLngBounds([a, a]);
+    if (g) { L.polyline([g, a], { color: "#fff", weight: 3, dashArray: "6 8" }).addTo(layer); bounds.extend(g); }
+    finishResult(bounds, 12);
+  }
+  state.history.push({ ...cur });
+  updateHud();
+}
+
+function finishResult(bounds, maxZoom) {
+  if (!state.cur.guess && guessMarker) { layer.removeLayer(guessMarker); guessMarker = null; }
+  L.marker(state.cur.actual, { icon: dot("actual"), interactive: false }).addTo(layer);
+  $("view").innerHTML = "";
+  setNmpz(false);
+  document.body.classList.add("result");
+  setTimeout(() => { map.invalidateSize(); map.fitBounds(bounds, { padding: [80, 80], maxZoom }); }, 30);
+}
+
+function next() {
+  if (!state || state.phase !== "result") return;
+  const over = settings.mode === "streak" ? !state.cur.correct : state.round >= ROUNDS;
+  if (over) return endGame();
+  state.round++;
+  startRound();
+}
+
+function endGame() {
+  state.phase = "over";
+  stopTimer();
+  const streak = settings.mode === "streak";
+  const score = streak ? state.streak : state.total;
+  const bk = bestKey(settings), prev = Number(lsGet(bk) || 0);
+  const isPb = score > prev;
+  if (isPb) lsSet(bk, String(score));
+  state.finalScore = score;
+
+  $("endTitle").textContent = streak ? "Streak over" : "Game over";
+  $("finalScore").textContent = streak ? "🔥 " + score : score.toLocaleString();
+  let sub = streak ? (score === 1 ? "country in a row" : "countries in a row") : "out of " + (ROUNDS * MAX_PTS).toLocaleString();
+  if (challenge && challenge.score != null) {
+    const them = challenge.score;
+    sub += " · " + (score > them ? "You beat the challenge (" : score === them ? "Tied with the challenge (" : "Challenge score: ") +
+           (streak ? them : them.toLocaleString()) + (score >= them ? ")" : "");
+  }
+  $("finalSub").textContent = sub;
+  $("pbBadge").style.display = isPb && score > 0 ? "block" : "none";
+  $("rounds").innerHTML = state.history.map((r, i) => {
+    const where = esc(r.place.name + ", " + pretty(r.country));
+    const right = streak ? (r.correct ? "✅" : "❌ " + (r.guessCountry ? esc(pretty(r.guessCountry)) : "no guess"))
+                         : (r.km != null ? fmtKm(r.km) + " · " : "no guess · ") + "<b>" + r.pts.toLocaleString() + "</b>";
+    return "<div><span>" + (i + 1) + ". " + where + "</span><span>" + right + "</span></div>";
+  }).join("");
+
+  // Summary map with every round
+  layer.clearLayers(); guessMarker = null;
+  const pts = [];
+  state.history.forEach((r, i) => {
+    L.marker(r.actual, { icon: dot("actual", i + 1), interactive: false }).addTo(layer); pts.push(r.actual);
+    if (r.guess) {
+      L.marker(r.guess, { icon: dot("guess", i + 1), interactive: false }).addTo(layer); pts.push(r.guess);
+      L.polyline([r.guess, r.actual], { color: "#fff", weight: 2, dashArray: "5 7" }).addTo(layer);
+    }
+  });
+  document.body.classList.add("result", "summary");
+  $("view").innerHTML = "";
+  $("endScreen").classList.add("show", "summary");
+  setTimeout(() => {
+    map.invalidateSize();
+    const w = $("endScreen").querySelector(".card").offsetWidth;
+    map.fitBounds(L.latLngBounds(pts), { paddingTopLeft: [Math.min(w + 40, innerWidth / 2), 60], paddingBottomRight: [40, 40], maxZoom: 10 });
+  }, 30);
+}
+
+function esc(s) { return s.replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c])); }
+
+function backToStart() {
+  if (!state || state.phase !== "guess") return;
+  if (panorama && state.cur.startPano) panorama.setPano(state.cur.startPano);
+  else if (!gmReady) showKeyless(state.cur.place);
+}
+
+async function skipLocation() {
+  if (!state || state.phase !== "guess") return;
+  stopTimer();
+  state.phase = "loading";
+  document.body.classList.add("loading");
+  const ok = await showLocation();
+  document.body.classList.remove("loading");
+  if (!ok) return;
+  state.phase = "guess";
+  startTimer();
+}
+
+// ---------- Challenge links ----------
+function challengeUrl() {
+  const c = { ...settings, seed: state.seed, score: state.finalScore };
+  return location.href.split("#")[0] + "#c=" + btoa(JSON.stringify(c));
+}
+function readChallenge() {
+  const m = location.hash.match(/#c=([A-Za-z0-9+/=]+)/);
+  if (!m) return null;
+  try {
+    const c = JSON.parse(atob(m[1]));
+    if (!MAPS.some(x => x.id === c.map) || !["classic", "streak"].includes(c.mode) || !MOVE_NAMES[c.move]) return null;
+    return { mode: c.mode, map: c.map, move: c.move, time: Number(c.time) || 0, seed: c.seed >>> 0, score: typeof c.score === "number" ? c.score : null };
+  } catch (e) { return null; }
+}
+
+// ---------- Menu ----------
+const MODE_DESC = {
+  classic: "5 rounds. Pin where you think you are — the closer you are, the more points (up to 5,000 per round).",
+  streak: "Name the country. Keep guessing right to build your streak — one wrong country and it's over."
+};
+
+function buildMenu() {
+  const sel = $("mapSel");
+  sel.innerHTML = "";
+  const groups = [["", MAPS.filter(m => !m.country)], ["Countries", MAPS.filter(m => m.country)]];
+  for (const [label, list] of groups) {
+    const parent = label ? sel.appendChild(Object.assign(document.createElement("optgroup"), { label })) : sel;
+    for (const m of list) parent.appendChild(new Option(m.name + " (" + PLACES.filter(m.filter).length + ")", m.id));
+  }
+}
+
+function syncMenu() {
+  document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.mode === settings.mode));
+  $("modeDesc").textContent = MODE_DESC[settings.mode];
+  // Country maps don't make sense for Country Streak
+  for (const o of $("mapSel").querySelectorAll("optgroup option")) o.disabled = settings.mode === "streak";
+  if (settings.mode === "streak" && mapById(settings.map).country) settings.map = "world";
+  $("mapSel").value = settings.map;
+  $("moveSel").value = settings.move;
+  $("timeSel").value = String(settings.time);
+  $("moveSel").querySelector('[value="nomove"]').textContent = "No Move (pan & zoom only)" + (currentKey() ? "" : " — needs API key");
+  const best = Number(lsGet(bestKey(settings)) || 0);
+  $("bestLine").textContent = best ? "Your best here: " + (settings.mode === "streak" ? "🔥 " + best : best.toLocaleString()) : "";
+  const locked = !!challenge;
+  ["mapSel", "moveSel", "timeSel"].forEach(id => $(id).disabled = locked);
+  document.querySelectorAll("#modeSeg button").forEach(b => b.disabled = locked);
+  $("challengeBanner").style.display = locked ? "block" : "none";
+  if (locked) $("challengeBanner").innerHTML = "<b>Challenge:</b> " + esc(settingsLabel(challenge)) +
+    (challenge.score != null ? "<br>Score to beat: <b>" + (challenge.mode === "streak" ? "🔥 " + challenge.score : challenge.score.toLocaleString()) + "</b>" : "") +
+    '<br><a href="#" id="clearChallenge">Play normally instead</a>';
+  $("startBtn").textContent = locked ? "Accept challenge" : "Play";
+}
+
+function showMenu() {
+  stopTimer();
+  state = null;
+  setNmpz(false);
+  $("view").innerHTML = "";
+  document.body.classList.remove("result", "summary", "loading");
+  $("endScreen").classList.remove("show", "summary");
+  $("startScreen").classList.add("show");
+  syncMenu();
+}
+
+// ---------- Wire up ----------
+$("keyInput").value = lsGet(KEY_STORE) || "";
+buildMenu();
+challenge = readChallenge();
+if (challenge) settings = { mode: challenge.mode, map: challenge.map, move: challenge.move, time: challenge.time };
+syncMenu();
+
+$("modeSeg").onclick = e => { const m = e.target.dataset && e.target.dataset.mode; if (m) { settings.mode = m; syncMenu(); } };
+$("mapSel").onchange = e => { settings.map = e.target.value; syncMenu(); };
+$("moveSel").onchange = e => { settings.move = e.target.value; syncMenu(); };
+$("timeSel").onchange = e => { settings.time = Number(e.target.value); syncMenu(); };
+$("keyInput").oninput = syncMenu;
+$("challengeBanner").onclick = e => {
+  if (e.target.id !== "clearChallenge") return;
+  e.preventDefault(); challenge = null; history.replaceState(null, "", location.pathname + location.search); syncMenu();
+};
+$("startBtn").onclick = () => startGame(settings, challenge ? challenge.seed : (Math.random() * 2 ** 32) >>> 0);
+$("againBtn").onclick = () => { challenge = null; startGame(settings, (Math.random() * 2 ** 32) >>> 0); };
+$("menuBtn").onclick = () => { challenge = null; history.replaceState(null, "", location.pathname + location.search); showMenu(); };
+$("quitBtn").onclick = () => { if (confirm("Quit this game?")) showMenu(); };
+$("challengeBtn").onclick = async () => {
+  const url = challengeUrl();
+  try { await navigator.clipboard.writeText(url); note("Challenge link copied — send it to a friend!"); }
+  catch (e) { prompt("Copy this challenge link:", url); }
+};
+$("guessBtn").onclick = () => submitGuess(false);
+$("nextBtn").onclick = next;
+$("backBtn").onclick = backToStart;
+$("skipBtn").onclick = skipLocation;
+$("bigToggle").onclick = () => {
+  const big = $("mini").classList.toggle("big");
+  $("bigToggle").textContent = big ? "Shrink map" : "Enlarge map";
+};
+// Drop focus after clicks so Space doesn't re-press the last button
+document.addEventListener("click", e => { if (e.target.closest("button")) e.target.closest("button").blur(); });
+document.addEventListener("keydown", e => {
+  if (e.code !== "Space" || !state || e.target.closest("input, select, textarea, button, a")) return;
+  e.preventDefault();
+  if (state.phase === "guess" && state.cur.guess) submitGuess(false);
+  else if (state.phase === "result") next();
+});
+</script>
+</body>
+</html>
