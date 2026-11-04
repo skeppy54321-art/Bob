@@ -1,0 +1,9 @@
+# Core symbolic math
+sympy==1.14.0
+
+# Enables sympy.parsing.latex.parse_latex (robust LaTeX parsing).
+# Without it the engine falls back to a small built-in LaTeX rewriter.
+antlr4-python3-runtime==4.11.*
+
+# Dev / test only
+pytest>=8.0

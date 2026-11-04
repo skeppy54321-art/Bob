@@ -1,0 +1,77 @@
+<Window x:Class="MathAssistant.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Settings" Height="620" Width="560"
+        Background="{StaticResource BgBrush}" WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="Margin" Value="0,10,0,2"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+        <Style TargetType="PasswordBox">
+            <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="AI provider" FontWeight="SemiBold"/>
+                <ComboBox x:Name="ProviderBox" SelectedIndex="0" Padding="6,4">
+                    <ComboBoxItem Content="Ollama (local, no key)"/>
+                    <ComboBoxItem Content="Claude (Anthropic)"/>
+                    <ComboBoxItem Content="OpenAI"/>
+                </ComboBox>
+
+                <TextBlock Text="Model name"/>
+                <TextBox x:Name="ModelBox"/>
+
+                <TextBlock Text="Claude API key (leave blank to keep current)"/>
+                <PasswordBox x:Name="ClaudeKeyBox"/>
+                <TextBlock Text="OpenAI API key (leave blank to keep current)"/>
+                <PasswordBox x:Name="OpenAiKeyBox"/>
+
+                <TextBlock Text="Ollama base URL"/>
+                <TextBox x:Name="OllamaUrlBox"/>
+                <TextBlock Text="Claude base URL"/>
+                <TextBox x:Name="ClaudeUrlBox"/>
+                <TextBlock Text="OpenAI base URL"/>
+                <TextBox x:Name="OpenAiUrlBox"/>
+
+                <TextBlock Text="Python executable (for the SymPy engine)"/>
+                <TextBox x:Name="PythonBox"/>
+
+                <CheckBox x:Name="AutoVerifyBox" Content="Automatically verify answers with SymPy"
+                          Foreground="{StaticResource TextBrush}" Margin="0,14,0,0"/>
+
+                <TextBlock Text="Max image edge (pixels) sent to the AI"/>
+                <TextBox x:Name="MaxEdgeBox"/>
+
+                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,14,0,0"
+                           Text="API keys are encrypted with Windows DPAPI (current user) and stored under %APPDATA%\MathAssistant. They never leave your machine except in requests to the provider you select."/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button x:Name="TestButton" Content="Test connection" Click="Test_Click"
+                    Background="{StaticResource PanelBrush}" HorizontalAlignment="Left"/>
+            <Button Content="Cancel" Click="Cancel_Click" Background="{StaticResource PanelBrush}"/>
+            <Button Content="Save" Click="Save_Click" MinWidth="90"/>
+        </StackPanel>
+    </Grid>
+</Window>

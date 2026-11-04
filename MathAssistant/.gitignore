@@ -1,0 +1,16 @@
+# .NET build output
+bin/
+obj/
+publish/
+*.user
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# App data (should never be committed)
+*.db
+settings.json
