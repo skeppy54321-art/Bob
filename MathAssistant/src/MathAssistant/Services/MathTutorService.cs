@@ -26,17 +26,23 @@ public sealed class MathTutorService
           "restated_problem": "the problem in clear terms",
           "steps": ["step 1 ...", "step 2 ...", "..."],
           "final_answer": "the final answer, concise",
-          "verification": {               // OPTIONAL - include only when it maps cleanly to symbolic math
-             "check": "solve|verify|verify_solution|simplify|factor|expand|evaluate|derivative|integral",
-             "expr": "e.g. x^2-5x+6=0",   // for solve/verify_solution/simplify/evaluate/derivative/integral
-             "value": "e.g. 3",           // for verify_solution
-             "candidate": "...",          // for verify (your simplified answer)
-             "reference": "...",          // for verify (an equivalent form to compare against)
-             "var": "x"                   // optional variable hint
+          "verification": {
+             "check": "solve|derivative|integral|limit|simplify|factor|expand|evaluate",
+             "expr": "the ORIGINAL problem expression, e.g. x^2-5x+6=0 or x^3",
+             "candidate": "YOUR final result, e.g. 2, 3 (all solutions, comma-separated) or 3x^2",
+             "var": "x",
+             "lower": "only for definite integrals",
+             "upper": "only for definite integrals"
           }
         }
-        Use plain ASCII math in expr/value/candidate/reference (^ for powers, * for
-        multiply). Show enough steps that a student can follow the reasoning.
+        The "verification" object is optional: include it only when the problem
+        maps cleanly onto one of those checks. A separate computer algebra system
+        will recompute the result from "expr" and compare it with "candidate".
+
+        Write ALL math as plain text everywhere, including the steps: use ^ for
+        powers, * for multiplication, sqrt(...), pi, and (a)/(b) for fractions.
+        Never use LaTeX or backslashes. Do not include comments in the JSON.
+        Show enough steps that a student can follow the reasoning.
         """;
 
     private const string HintSystemPrompt = """
@@ -82,24 +88,42 @@ public sealed class MathTutorService
         return (solution, verification, markdown);
     }
 
+    private static readonly JsonSerializerOptions LenientJson = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        ReadCommentHandling = JsonCommentHandling.Skip,  // models sometimes copy "// ..." comments
+        AllowTrailingCommas = true,
+    };
+
     /// <summary>Tolerant JSON extraction - models sometimes wrap JSON in prose/fences.</summary>
-    private static AiSolution ParseSolution(string raw)
+    internal static AiSolution ParseSolution(string raw)
     {
         var json = ExtractJsonObject(raw);
         if (json is not null)
         {
-            try
+            // Try as-is, then once more with invalid escapes (e.g. a stray "\sqrt")
+            // repaired by doubling the backslash.
+            foreach (var candidate in new[] { json, RepairInvalidEscapes(json) })
             {
-                var sol = JsonSerializer.Deserialize<AiSolution>(json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (sol is not null && (sol.Steps.Count > 0 || !string.IsNullOrWhiteSpace(sol.FinalAnswer)))
-                    return sol;
+                try
+                {
+                    var sol = JsonSerializer.Deserialize<AiSolution>(candidate, LenientJson);
+                    if (sol is not null && (sol.Steps.Count > 0 || !string.IsNullOrWhiteSpace(sol.FinalAnswer)))
+                        return sol;
+                }
+                catch (JsonException) { /* try the next form */ }
             }
-            catch { /* fall through to raw passthrough */ }
         }
         // Fallback: show whatever the model said.
         return new AiSolution { RestatedProblem = "", FinalAnswer = "", Steps = { raw.Trim() } };
     }
+
+    /// <summary>
+    /// Doubles any backslash that does not start a valid JSON escape sequence.
+    /// Only invalid sequences are touched, so well-formed JSON is never changed.
+    /// </summary>
+    private static string RepairInvalidEscapes(string json) =>
+        System.Text.RegularExpressions.Regex.Replace(json, @"\\(?![""\\/bfnrtu])", @"\\");
 
     private static string? ExtractJsonObject(string text)
     {
@@ -139,6 +163,8 @@ public sealed class MathTutorService
             sb.AppendLine($"> **Independent check (SymPy):** {v.Summary}");
         else if (!string.IsNullOrWhiteSpace(v.Summary))
             sb.AppendLine($"> _{v.Summary}_");
+        else
+            sb.AppendLine("> _Not independently checked (no symbolic form was provided, or auto-verify is off)._");
 
         return sb.ToString();
     }

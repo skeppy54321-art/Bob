@@ -82,7 +82,9 @@ public sealed class HistoryStore
             list.Add(new HistoryEntry
             {
                 Id = r.GetInt64(r.GetOrdinal("Id")),
-                CreatedAt = DateTimeOffset.Parse(r.GetString(r.GetOrdinal("CreatedAt"))),
+                CreatedAt = DateTimeOffset.Parse(r.GetString(r.GetOrdinal("CreatedAt")),
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.RoundtripKind),
                 Question = r.GetString(r.GetOrdinal("Question")),
                 ImagePath = r["ImagePath"] as string,
                 ProviderModel = r.GetString(r.GetOrdinal("ProviderModel")),

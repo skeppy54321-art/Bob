@@ -6,11 +6,66 @@ single bad request must never take it down.
 """
 from __future__ import annotations
 
+import math
+import re
 from typing import Any, Callable
 
 import sympy as sp
 
 from .parsing import ParseError, main_symbol, to_equation, to_expr
+
+
+def _attach_match(result: dict, computed: Any, req: dict, *,
+                  antiderivative_of: Any = None, var: Any = None) -> dict:
+    """If the request carries the AI's claimed answer (`candidate`), compare it
+    with what SymPy computed and record `matches` / `match_detail`.
+
+    This is what makes verification independent: SymPy computes the result on
+    its own, then checks the model's answer against it.
+    """
+    cand = req.get("candidate")
+    if cand is None or str(cand).strip() == "":
+        return result
+    try:
+        claimed = to_expr(str(cand))
+    except ParseError as exc:
+        result["matches"] = False
+        result["match_detail"] = f"could not parse the claimed answer: {exc}"
+        return result
+    if antiderivative_of is not None:
+        # Antiderivatives differ by a constant, so compare derivatives instead.
+        claimed = claimed.subs(sp.Symbol("C"), 0)
+        ok, method, detail = _equivalent(sp.diff(claimed, var), antiderivative_of)
+    else:
+        ok, method, detail = _equivalent(claimed, computed)
+    result["matches"] = ok
+    result["match_detail"] = f"{method}: {detail}"
+    return result
+
+
+def _match_solution_set(solutions: list, claimed_text: str) -> tuple[bool, str]:
+    """Compare SymPy's solution set with a claimed list such as 'x = 2, x = 3'."""
+    pieces = [p.strip() for p in re.split(r"[,;]|\bor\b|\band\b", claimed_text)
+              if p.strip()]
+    claimed = []
+    for p in pieces:
+        if "=" in p:
+            p = p.split("=")[-1]
+        claimed.append(to_expr(p))
+
+    def contains(pool: list, item: Any) -> bool:
+        return any(_equivalent(item, q)[0] for q in pool)
+
+    missing = [s for s in solutions if not contains(claimed, s)]
+    extra = [c for c in claimed if not contains(solutions, c)]
+    if not missing and not extra:
+        return True, "solution sets agree"
+    parts = []
+    if missing:
+        parts.append("missing " + ", ".join(_pretty(m) for m in missing))
+    if extra:
+        parts.append("not actually solutions: " + ", ".join(_pretty(e) for e in extra))
+    return False, "; ".join(parts)
 
 
 def _latex(obj: Any) -> str:
@@ -36,19 +91,26 @@ def op_parse(req: dict) -> dict:
 def op_simplify(req: dict) -> dict:
     expr = to_expr(req["expr"])
     simplified = sp.simplify(expr)
-    return {"ok": True, "result": _pretty(simplified), "latex": _latex(simplified)}
+    return _attach_match({"ok": True, "result": _pretty(simplified),
+                          "latex": _latex(simplified)}, simplified, req)
 
 
 def op_solve(req: dict) -> dict:
     eq = to_equation(req["expr"])
     var = main_symbol(eq, req.get("var"))
-    sols = sp.solve(eq, var, dict=False)
-    out = []
-    for s in sols:
-        s_simpl = sp.simplify(s)
-        out.append({"sympy": _pretty(s_simpl), "latex": _latex(s_simpl),
-                    "approx": _safe_float(s_simpl)})
-    return {"ok": True, "variable": var.name, "solutions": out}
+    sols = [sp.simplify(s) for s in sp.solve(eq, var, dict=False)]
+    out = [{"sympy": _pretty(s), "latex": _latex(s), "approx": _safe_float(s)}
+           for s in sols]
+    result = {"ok": True, "variable": var.name, "solutions": out}
+    cand = req.get("candidate")
+    if cand is not None and str(cand).strip():
+        try:
+            ok, detail = _match_solution_set(sols, str(cand))
+        except ParseError as exc:
+            ok, detail = False, f"could not parse the claimed answer: {exc}"
+        result["matches"] = ok
+        result["match_detail"] = detail
+    return result
 
 
 def op_derivative(req: dict) -> dict:
@@ -57,8 +119,9 @@ def op_derivative(req: dict) -> dict:
     order = int(req.get("order", 1))
     d = sp.diff(expr, var, order)
     d_simpl = sp.simplify(d)
-    return {"ok": True, "variable": var.name, "order": order,
-            "result": _pretty(d_simpl), "latex": _latex(d_simpl)}
+    return _attach_match({"ok": True, "variable": var.name, "order": order,
+                          "result": _pretty(d_simpl), "latex": _latex(d_simpl)},
+                         d_simpl, req)
 
 
 def op_integral(req: dict) -> dict:
@@ -69,12 +132,14 @@ def op_integral(req: dict) -> dict:
         lo, hi = to_expr(str(a)), to_expr(str(b))
         val = sp.integrate(expr, (var, lo, hi))
         val_s = sp.simplify(val)
-        return {"ok": True, "definite": True, "variable": var.name,
-                "result": _pretty(val_s), "latex": _latex(val_s),
-                "approx": _safe_float(val_s)}
+        return _attach_match({"ok": True, "definite": True, "variable": var.name,
+                              "result": _pretty(val_s), "latex": _latex(val_s),
+                              "approx": _safe_float(val_s)}, val_s, req)
     anti = sp.integrate(expr, var)
-    return {"ok": True, "definite": False, "variable": var.name,
-            "result": _pretty(anti) + " + C", "latex": _latex(anti) + " + C"}
+    return _attach_match({"ok": True, "definite": False, "variable": var.name,
+                          "result": _pretty(anti) + " + C",
+                          "latex": _latex(anti) + " + C"},
+                         anti, req, antiderivative_of=expr, var=var)
 
 
 def op_limit(req: dict) -> dict:
@@ -83,20 +148,22 @@ def op_limit(req: dict) -> dict:
     point = to_expr(str(req.get("point", "0")))
     direction = req.get("dir", "+")
     lim = sp.limit(expr, var, point, direction if direction in ("+", "-") else "+")
-    return {"ok": True, "variable": var.name, "result": _pretty(lim),
-            "latex": _latex(lim), "approx": _safe_float(lim)}
+    return _attach_match({"ok": True, "variable": var.name, "result": _pretty(lim),
+                          "latex": _latex(lim), "approx": _safe_float(lim)}, lim, req)
 
 
 def op_factor(req: dict) -> dict:
     expr = to_expr(req["expr"])
     factored = sp.factor(expr)
-    return {"ok": True, "result": _pretty(factored), "latex": _latex(factored)}
+    return _attach_match({"ok": True, "result": _pretty(factored),
+                          "latex": _latex(factored)}, factored, req)
 
 
 def op_expand(req: dict) -> dict:
     expr = to_expr(req["expr"])
     expanded = sp.expand(expr)
-    return {"ok": True, "result": _pretty(expanded), "latex": _latex(expanded)}
+    return _attach_match({"ok": True, "result": _pretty(expanded),
+                          "latex": _latex(expanded)}, expanded, req)
 
 
 def op_series(req: dict) -> dict:
@@ -167,8 +234,9 @@ def op_evaluate(req: dict) -> dict:
     val = expr.subs(subs)
     digits = int(req.get("digits", 12))
     numeric = _safe_float(val, digits)
-    return {"ok": True, "result": _pretty(sp.simplify(val)),
-            "latex": _latex(val), "approx": numeric}
+    simplified = sp.simplify(val)
+    return _attach_match({"ok": True, "result": _pretty(simplified),
+                          "latex": _latex(val), "approx": numeric}, simplified, req)
 
 
 def op_verify(req: dict) -> dict:
@@ -232,7 +300,10 @@ def _safe_float(obj: Any, digits: int = 12) -> float | str | None:
     try:
         v = sp.N(obj, digits)
         if v.is_real:
-            return float(v)
+            f = float(v)
+            # inf/nan would serialise as bare Infinity/NaN, which is not valid
+            # JSON and would break the C# client's parser.
+            return f if math.isfinite(f) else str(v)
         return str(v)
     except Exception:  # noqa: BLE001
         return None

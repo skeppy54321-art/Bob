@@ -141,7 +141,9 @@ public sealed class OpenAiProvider : IAiProvider
             }
         }
 
-        var body = new { model = request.Model, max_tokens = request.MaxTokens, messages };
+        // max_completion_tokens replaces the deprecated max_tokens; newer OpenAI
+        // models reject max_tokens outright, while older ones accept both.
+        var body = new { model = request.Model, max_completion_tokens = request.MaxTokens, messages };
 
         using var msg = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/v1/chat/completions");
         msg.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);

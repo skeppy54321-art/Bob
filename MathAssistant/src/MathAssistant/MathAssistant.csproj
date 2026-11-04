@@ -23,6 +23,9 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
     <!-- MVVM helpers (RelayCommand, ObservableObject). -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <!-- Windows DPAPI (ProtectedData) for encrypting API keys at rest. Listed
+         explicitly so the build never depends on what the shared framework ships. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0" />
   </ItemGroup>
 
   <!-- Ship the Python engine next to the app so it can be launched at runtime. -->

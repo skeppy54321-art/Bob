@@ -172,10 +172,13 @@ cd MathAssistant/math-engine
 python -m pytest -q          # 13 unit tests
 python -m engine.server --selftest
 ```
-The suite (18 tests) covers solving, systems, factoring, expansion, series,
+The suite (28 tests) covers solving, systems, factoring, expansion, series,
 differentiation, integration, limits, descriptive statistics, equivalence
-verification (both positive and negative), solution checking, LaTeX parsing,
-and **injection safety** (input is never `eval`'d as Python).
+verification (both positive and negative), solution checking, LaTeX/Unicode
+parsing, answer-matching (the engine recomputes and compares the model's
+answer), strict-JSON output (no `inf`/`nan` on the wire), and **injection
+safety** — hostile input is rejected *and* proven to have no side effects
+(it tries to create a file; the test asserts the file never appears).
 
 You can also drive the engine by hand:
 ```bash
@@ -209,6 +212,8 @@ Manual test checklist for Stage 1:
 | Ollama 404 / connection refused | Run `ollama serve`; `ollama pull <model>`; check the base URL. |
 | Claude/OpenAI 401 | Re-enter the API key in Settings (DPAPI keys are per-user/per-machine). |
 | Images rejected by model | Use a vision-capable model (e.g. `gpt-4o`, `llava`, a Claude model). |
+| OpenAI 400 "unsupported parameter: max_completion_tokens" | You're pointing at an older OpenAI-compatible server. In `Services/AiProvider.cs`, `OpenAiProvider`, change `max_completion_tokens` back to `max_tokens`. |
+| Answer shown but "Not independently checked" | Normal for word problems / proofs with no clean symbolic form, or when Auto-verify is off. |
 
 ---
 

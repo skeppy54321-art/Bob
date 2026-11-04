@@ -110,7 +110,7 @@ public partial class SettingsWindow : Window
             {
                 Model = ModelBox.Text.Trim(),
                 SystemPrompt = "Reply with exactly: OK",
-                MaxTokens = 5,
+                MaxTokens = 64,   // headroom for reasoning models that spend tokens before replying
                 Turns = { new AiTurn("user", "ping") }
             };
             var reply = await provider.CompleteAsync(req);

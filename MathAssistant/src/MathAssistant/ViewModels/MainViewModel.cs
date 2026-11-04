@@ -18,9 +18,11 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
     private readonly SettingsStore _settingsStore = new();
     private readonly HistoryStore _history = new();
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(3) };
-    private readonly MathEngineClient _engine;
-    private readonly MathTutorService _tutor;
-    private readonly ImageImportService _images;
+    // Rebuilt when the relevant settings change (see OpenSettingsAsync).
+    private MathEngineClient _engine = null!;
+    private MathTutorService _tutor = null!;
+    private ImageImportService _images = null!;
+    private string _engineDir = "";
 
     private byte[]? _attachedImage;
     private string _attachedMediaType = "image/png";
@@ -40,8 +42,8 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         Settings = _settingsStore.Load();
         PracticeMode = Settings.PracticeMode;
 
-        var engineDir = Path.Combine(AppContext.BaseDirectory, "math-engine");
-        _engine = new MathEngineClient(Settings.PythonPath, engineDir);
+        _engineDir = Path.Combine(AppContext.BaseDirectory, "math-engine");
+        _engine = new MathEngineClient(Settings.PythonPath, _engineDir);
         _tutor = new MathTutorService(_engine);
         _images = new ImageImportService(Settings.MaxImageEdgePixels);
 
@@ -176,14 +178,31 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
     }
 
     [RelayCommand]
-    private void OpenSettings()
+    private async Task OpenSettingsAsync()
     {
-        var win = new Views.SettingsWindow(Settings, _settingsStore) { Owner = System.Windows.Application.Current.MainWindow };
-        if (win.ShowDialog() == true)
+        var oldPython = Settings.PythonPath;
+        var oldEdge = Settings.MaxImageEdgePixels;
+
+        // The dialog edits a copy, so Cancel leaves the live settings untouched.
+        var working = _settingsStore.Load();
+        var win = new Views.SettingsWindow(working, _settingsStore) { Owner = System.Windows.Application.Current.MainWindow };
+        if (win.ShowDialog() != true) return;
+
+        Settings = working;
+        PracticeMode = Settings.PracticeMode;
+
+        if (Settings.MaxImageEdgePixels != oldEdge)
+            _images = new ImageImportService(Settings.MaxImageEdgePixels);
+
+        if (!string.Equals(Settings.PythonPath, oldPython, StringComparison.Ordinal))
         {
-            Settings = _settingsStore.Load();
-            RefreshStatus();
+            // Restart the engine with the new interpreter.
+            var old = _engine;
+            _engine = new MathEngineClient(Settings.PythonPath, _engineDir);
+            _tutor = new MathTutorService(_engine);
+            await old.DisposeAsync();
         }
+        RefreshStatus();
     }
 
     [RelayCommand]

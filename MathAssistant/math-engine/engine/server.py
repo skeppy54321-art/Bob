@@ -22,12 +22,20 @@ from .operations import handle
 
 
 def _run_stdio() -> int:
+    # On Windows, piped stdio defaults to the ANSI code page (e.g. cp1252).
+    # Force UTF-8 so non-ASCII math survives the round trip.
+    for stream in (sys.stdin, sys.stdout):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
     # Announce readiness so the parent process can wait for a known line.
     banner = {"ok": True, "op": "ready", "version": __version__}
     sys.stdout.write(json.dumps(banner) + "\n")
     sys.stdout.flush()
     for line in sys.stdin:
-        line = line.strip()
+        # Some writers prepend a UTF-8 byte-order mark; it is not whitespace.
+        line = line.strip().lstrip("﻿")
         if not line:
             continue
         try:
@@ -51,8 +59,9 @@ def _run_once(payload: str) -> int:
     except json.JSONDecodeError as exc:
         print(json.dumps({"ok": False, "error": f"invalid JSON: {exc}"}))
         return 2
-    print(json.dumps(handle(req), indent=2))
-    return 0 if handle(req).get("ok") else 1
+    resp = handle(req)
+    print(json.dumps(resp, indent=2))
+    return 0 if resp.get("ok") else 1
 
 
 def _selftest() -> int:

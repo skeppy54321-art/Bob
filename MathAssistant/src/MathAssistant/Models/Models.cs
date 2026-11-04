@@ -63,6 +63,8 @@ public sealed class VerificationRequest
     [JsonPropertyName("candidate")] public string? Candidate { get; set; }
     [JsonPropertyName("reference")] public string? Reference { get; set; }
     [JsonPropertyName("var")] public string? Var { get; set; }
+    [JsonPropertyName("lower")] public string? Lower { get; set; }     // definite integrals
+    [JsonPropertyName("upper")] public string? Upper { get; set; }
 }
 
 /// <summary>Result of running the independent SymPy verification.</summary>
