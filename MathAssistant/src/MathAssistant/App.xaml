@@ -1,0 +1,34 @@
+<Application x:Class="MathAssistant.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <!-- Simple palette -->
+        <SolidColorBrush x:Key="BgBrush" Color="#1E1F2B"/>
+        <SolidColorBrush x:Key="PanelBrush" Color="#282A3A"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#6C8CFF"/>
+        <SolidColorBrush x:Key="UserBubble" Color="#39406B"/>
+        <SolidColorBrush x:Key="AssistantBubble" Color="#2E3042"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#ECECF1"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#9A9CB8"/>
+
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="4,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Application.Resources>
+</Application>

@@ -1,0 +1,22 @@
+{
+  "_comment": "Example of %APPDATA%\\MathAssistant\\settings.json. The real file is written by the app. API key fields hold DPAPI-encrypted base64, NOT plaintext - set keys via the Settings dialog, not by editing this file.",
+
+  "Provider": "Ollama",
+
+  "ClaudeModel": "claude-opus-5-5",
+  "OpenAiModel": "gpt-4o",
+  "OllamaModel": "llava",
+
+  "ClaudeBaseUrl": "https://api.anthropic.com",
+  "OpenAiBaseUrl": "https://api.openai.com",
+  "OllamaBaseUrl": "http://localhost:11434",
+
+  "ClaudeApiKeyProtected": "",
+  "OpenAiApiKeyProtected": "",
+
+  "PracticeMode": false,
+  "AutoVerify": true,
+  "MaxImageEdgePixels": 1600,
+
+  "PythonPath": "python"
+}
