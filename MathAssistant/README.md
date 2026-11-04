@@ -32,12 +32,15 @@ trusting the language model.
 - Providers: **Claude**, **OpenAI**, and **Ollama** (local), selectable in Settings.
 - Input: typed text, attached image files, **pasted screenshots**, and **PDF pages**.
 - Vision: images are sent to the vision-capable model you configure.
-- **Independent verification** of answers with SymPy (`solve`, `verify`,
-  `verify_solution`, `simplify`, `evaluate`, `derivative`, `integral`, `limit`).
-- Step-by-step explanations rendered in a chat UI.
+- **Independent verification** of answers with SymPy. Engine operations:
+  `solve`, `system` (simultaneous equations), `verify`, `verify_solution`,
+  `simplify`, `factor`, `expand`, `series` (Taylor), `evaluate`, `derivative`,
+  `integral`, `limit`, and `stats` (mean/median/variance/std).
+- Step-by-step explanations rendered in a chat UI, with **copy-to-clipboard**.
 - **Practice mode**: hints first, answer withheld.
-- Local **SQLite history** of solved problems.
-- API keys encrypted at rest with **Windows DPAPI**.
+- Local **SQLite history** of solved problems, with **export to Markdown/JSON**.
+- API keys encrypted at rest with **Windows DPAPI**, plus a **Test connection**
+  button in Settings.
 
 ### Architecture
 
@@ -169,7 +172,8 @@ cd MathAssistant/math-engine
 python -m pytest -q          # 13 unit tests
 python -m engine.server --selftest
 ```
-The suite covers solving, differentiation, integration, limits, equivalence
+The suite (18 tests) covers solving, systems, factoring, expansion, series,
+differentiation, integration, limits, descriptive statistics, equivalence
 verification (both positive and negative), solution checking, LaTeX parsing,
 and **injection safety** (input is never `eval`'d as Python).
 
@@ -177,6 +181,8 @@ You can also drive the engine by hand:
 ```bash
 python -m engine.server --request '{"op":"solve","expr":"x^2 - 5x + 6 = 0"}'
 python -m engine.server --request '{"op":"verify","candidate":"(x+1)^2","reference":"x^2+2x+1"}'
+python -m engine.server --request '{"op":"system","exprs":["x+y=3","x-y=1"]}'
+python -m engine.server --request '{"op":"stats","data":[2,4,4,4,5,5,7,9]}'
 ```
 
 ### C# app

@@ -92,6 +92,8 @@ public sealed class MathEngineClient : IAsyncDisposable
             "verify" => new { op = "verify", candidate = req.Candidate, reference = req.Reference },
             "verify_solution" => new { op = "verify_solution", expr = req.Expr, value = req.Value, var = req.Var },
             "simplify" => new { op = "simplify", expr = req.Expr },
+            "factor" => new { op = "factor", expr = req.Expr },
+            "expand" => new { op = "expand", expr = req.Expr },
             "evaluate" => new { op = "evaluate", expr = req.Expr },
             "derivative" => new { op = "derivative", expr = req.Expr, var = req.Var },
             "integral" => new { op = "integral", expr = req.Expr },

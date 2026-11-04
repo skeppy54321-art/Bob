@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Net.Http;
+using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MathAssistant.Models;
@@ -190,6 +191,75 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
     {
         _history.Clear();
         LoadHistory();
+    }
+
+    [RelayCommand]
+    private void CopyMessage(ChatMessage? msg)
+    {
+        if (msg is null) return;
+        try
+        {
+            System.Windows.Clipboard.SetText(msg.Text);
+            StatusText = "Copied to clipboard.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Copy failed: " + ex.Message;
+        }
+        RefreshStatusLater();
+    }
+
+    [RelayCommand]
+    private void ExportHistory()
+    {
+        var entries = _history.GetRecent(int.MaxValue);
+        if (entries.Count == 0)
+        {
+            StatusText = "No history to export.";
+            RefreshStatusLater();
+            return;
+        }
+
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Export history",
+            FileName = $"math-history-{DateTime.Now:yyyyMMdd-HHmm}",
+            Filter = "Markdown (*.md)|*.md|JSON (*.json)|*.json"
+        };
+        if (dlg.ShowDialog() != true) return;
+
+        try
+        {
+            if (dlg.FileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(entries,
+                    new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(dlg.FileName, json);
+            }
+            else
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine("# AI Mathematics Assistant — history").AppendLine();
+                foreach (var e in entries)
+                {
+                    sb.AppendLine($"## {e.CreatedAt:g} · {e.Topic}");
+                    sb.AppendLine($"**Q:** {e.Question}");
+                    if (!string.IsNullOrEmpty(e.ImagePath)) sb.AppendLine($"_attachment: {e.ImagePath}_");
+                    sb.AppendLine($"_model: {e.ProviderModel}_").AppendLine();
+                    sb.AppendLine(e.AnswerMarkdown).AppendLine();
+                    if (!string.IsNullOrWhiteSpace(e.VerificationSummary))
+                        sb.AppendLine($"> {e.VerificationSummary}").AppendLine();
+                    sb.AppendLine("---").AppendLine();
+                }
+                File.WriteAllText(dlg.FileName, sb.ToString());
+            }
+            StatusText = $"Exported {entries.Count} entries.";
+        }
+        catch (Exception ex)
+        {
+            Messages.Add(new ChatMessage { Role = "assistant", Text = $"⚠️ Export failed: {ex.Message}" });
+        }
+        RefreshStatusLater();
     }
 
     [RelayCommand]

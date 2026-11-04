@@ -27,7 +27,7 @@ public sealed class MathTutorService
           "steps": ["step 1 ...", "step 2 ...", "..."],
           "final_answer": "the final answer, concise",
           "verification": {               // OPTIONAL - include only when it maps cleanly to symbolic math
-             "check": "solve|verify|verify_solution|simplify|evaluate|derivative|integral",
+             "check": "solve|verify|verify_solution|simplify|factor|expand|evaluate|derivative|integral",
              "expr": "e.g. x^2-5x+6=0",   // for solve/verify_solution/simplify/evaluate/derivative/integral
              "value": "e.g. 3",           // for verify_solution
              "candidate": "...",          // for verify (your simplified answer)

@@ -68,6 +68,8 @@
         </ScrollViewer>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button x:Name="TestButton" Content="Test connection" Click="Test_Click"
+                    Background="{StaticResource PanelBrush}" HorizontalAlignment="Left"/>
             <Button Content="Cancel" Click="Cancel_Click" Background="{StaticResource PanelBrush}"/>
             <Button Content="Save" Click="Save_Click" MinWidth="90"/>
         </StackPanel>

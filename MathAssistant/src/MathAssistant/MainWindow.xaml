@@ -58,6 +58,11 @@
                                                    Visibility="{Binding ImagePath, Converter={StaticResource StrVis}}"/>
                                         <TextBlock Text="{Binding Text}" TextWrapping="Wrap"
                                                    Foreground="{StaticResource TextBrush}"/>
+                                        <Button Content="Copy" HorizontalAlignment="Right" Margin="0,6,0,0"
+                                                Padding="8,2" FontSize="10" Background="#33000000"
+                                                Command="{Binding DataContext.CopyMessageCommand,
+                                                          RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}"/>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
@@ -134,8 +139,12 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
-                <Button Grid.Row="2" Content="Clear history" Command="{Binding ClearHistoryCommand}"
-                        Background="#44000000" Margin="2,8,2,2"/>
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="2,8,2,2">
+                    <Button Content="Export" Command="{Binding ExportHistoryCommand}"
+                            Background="{StaticResource PanelBrush}" MinWidth="80"/>
+                    <Button Content="Clear history" Command="{Binding ClearHistoryCommand}"
+                            Background="#44000000" MinWidth="110"/>
+                </StackPanel>
             </Grid>
         </Border>
 

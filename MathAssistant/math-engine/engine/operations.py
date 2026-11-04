@@ -87,6 +87,79 @@ def op_limit(req: dict) -> dict:
             "latex": _latex(lim), "approx": _safe_float(lim)}
 
 
+def op_factor(req: dict) -> dict:
+    expr = to_expr(req["expr"])
+    factored = sp.factor(expr)
+    return {"ok": True, "result": _pretty(factored), "latex": _latex(factored)}
+
+
+def op_expand(req: dict) -> dict:
+    expr = to_expr(req["expr"])
+    expanded = sp.expand(expr)
+    return {"ok": True, "result": _pretty(expanded), "latex": _latex(expanded)}
+
+
+def op_series(req: dict) -> dict:
+    """Taylor/Maclaurin series of expr about `point` up to `order` terms."""
+    expr = to_expr(req["expr"])
+    var = main_symbol(expr, req.get("var"))
+    point = to_expr(str(req.get("point", "0")))
+    order = int(req.get("order", 6))
+    ser = sp.series(expr, var, point, order).removeO()
+    return {"ok": True, "variable": var.name, "point": _pretty(point),
+            "order": order, "result": _pretty(ser), "latex": _latex(ser)}
+
+
+def op_system(req: dict) -> dict:
+    """Solve a system of equations. `exprs` is a list like ['x+y=3','x-y=1']."""
+    raw = req.get("exprs")
+    if not isinstance(raw, list) or not raw:
+        raise ParseError("'exprs' must be a non-empty list of equations")
+    eqs = [to_equation(str(e)) for e in raw]
+    if req.get("vars"):
+        variables = [sp.Symbol(v) for v in req["vars"]]
+    else:
+        variables = sorted({s for eq in eqs for s in eq.free_symbols},
+                           key=lambda s: s.name)
+    sols = sp.solve(eqs, variables, dict=True)
+    out = []
+    for sol in sols:
+        out.append({str(k): {"sympy": _pretty(v), "latex": _latex(v),
+                             "approx": _safe_float(v)} for k, v in sol.items()})
+    return {"ok": True, "variables": [v.name for v in variables], "solutions": out}
+
+
+def op_stats(req: dict) -> dict:
+    """Descriptive statistics over a list of numbers (exact where possible)."""
+    data = req.get("data")
+    if not isinstance(data, list) or not data:
+        raise ParseError("'data' must be a non-empty list of numbers")
+    vals = [sp.Rational(str(x)) if not isinstance(x, str) else to_expr(x) for x in data]
+    n = len(vals)
+    total = sum(vals, sp.Integer(0))
+    mean = sp.nsimplify(total / n)
+    ordered = sorted(vals, key=lambda v: float(sp.N(v)))
+    if n % 2 == 1:
+        median = ordered[n // 2]
+    else:
+        median = sp.nsimplify((ordered[n // 2 - 1] + ordered[n // 2]) / 2)
+    # population and sample variance
+    sq = sum(((v - mean) ** 2 for v in vals), sp.Integer(0))
+    pop_var = sp.nsimplify(sq / n)
+    samp_var = sp.nsimplify(sq / (n - 1)) if n > 1 else None
+    return {
+        "ok": True, "n": n,
+        "mean": {"sympy": _pretty(mean), "approx": _safe_float(mean)},
+        "median": {"sympy": _pretty(median), "approx": _safe_float(median)},
+        "min": _safe_float(ordered[0]), "max": _safe_float(ordered[-1]),
+        "population_variance": {"sympy": _pretty(pop_var), "approx": _safe_float(pop_var)},
+        "population_std": _safe_float(sp.sqrt(pop_var)),
+        "sample_variance": None if samp_var is None else
+            {"sympy": _pretty(samp_var), "approx": _safe_float(samp_var)},
+        "sample_std": None if samp_var is None else _safe_float(sp.sqrt(samp_var)),
+    }
+
+
 def op_evaluate(req: dict) -> dict:
     """Numerically evaluate an expression, optionally substituting variables."""
     expr = to_expr(req["expr"])
@@ -170,6 +243,11 @@ OPERATIONS: dict[str, Callable[[dict], dict]] = {
     "parse": op_parse,
     "simplify": op_simplify,
     "solve": op_solve,
+    "system": op_system,
+    "factor": op_factor,
+    "expand": op_expand,
+    "series": op_series,
+    "stats": op_stats,
     "derivative": op_derivative,
     "integral": op_integral,
     "limit": op_limit,

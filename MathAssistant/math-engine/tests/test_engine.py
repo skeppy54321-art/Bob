@@ -54,6 +54,36 @@ def test_latex_parse():
     assert r["ok"] and r["free_symbols"] == ["x"]
 
 
+def test_factor():
+    r = handle({"op": "factor", "expr": "x^2 - 5x + 6"})
+    assert r["result"] in ("(x - 2)*(x - 3)", "(x - 3)*(x - 2)")
+
+
+def test_expand():
+    r = handle({"op": "expand", "expr": "(x+1)*(x+2)"})
+    assert r["result"] == "x**2 + 3*x + 2"
+
+
+def test_series():
+    r = handle({"op": "series", "expr": "exp(x)", "point": "0", "order": 4})
+    # 1 + x + x^2/2 + x^3/6
+    assert "x**3/6" in r["result"]
+
+
+def test_system_linear():
+    r = handle({"op": "system", "exprs": ["x + y = 3", "x - y = 1"]})
+    assert r["ok"]
+    sol = r["solutions"][0]
+    assert sol["x"]["approx"] == 2.0 and sol["y"]["approx"] == 1.0
+
+
+def test_stats_mean_median():
+    r = handle({"op": "stats", "data": [2, 4, 4, 4, 5, 5, 7, 9]})
+    assert r["mean"]["approx"] == 5.0
+    assert r["median"]["approx"] == 4.5
+    assert r["population_std"] == 2.0  # classic textbook example
+
+
 def test_unknown_op_is_safe():
     r = handle({"op": "nope"})
     assert r["ok"] is False and "available" in r

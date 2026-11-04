@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net.Http;
 using System.Windows;
 using MathAssistant.Models;
 using MathAssistant.Services;
@@ -88,4 +89,46 @@ public partial class SettingsWindow : Window
         DialogResult = false;
         Close();
     }
+
+    /// <summary>Send a tiny request to the selected provider to confirm it works.</summary>
+    private async void Test_Click(object sender, RoutedEventArgs e)
+    {
+        TestButton.IsEnabled = false;
+        TestButton.Content = "Testing…";
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+            IAiProvider provider = ProviderBox.SelectedIndex switch
+            {
+                1 => new ClaudeProvider(http, ClaudeUrlBox.Text.Trim(),
+                        ResolveKey(ClaudeKeyBox.Password, _settings.ClaudeApiKeyProtected)),
+                2 => new OpenAiProvider(http, OpenAiUrlBox.Text.Trim(),
+                        ResolveKey(OpenAiKeyBox.Password, _settings.OpenAiApiKeyProtected)),
+                _ => new OllamaProvider(http, OllamaUrlBox.Text.Trim())
+            };
+            var req = new AiRequest
+            {
+                Model = ModelBox.Text.Trim(),
+                SystemPrompt = "Reply with exactly: OK",
+                MaxTokens = 5,
+                Turns = { new AiTurn("user", "ping") }
+            };
+            var reply = await provider.CompleteAsync(req);
+            MessageBox.Show(this, $"Success — {provider.Name} replied:\n\n{reply}",
+                "Connection OK", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Connection failed",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            TestButton.IsEnabled = true;
+            TestButton.Content = "Test connection";
+        }
+    }
+
+    private static string ResolveKey(string typed, string storedProtected)
+        => string.IsNullOrEmpty(typed) ? SettingsStore.Unprotect(storedProtected) : typed;
 }
