@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Cube Timer</title>
+<style>
+  :root {
+    --bg: #14161a;
+    --panel: #1d2026;
+    --line: #2b2f37;
+    --text: #e8eaee;
+    --muted: #8b919c;
+    --accent: #4da3ff;
+    --red: #ff4d4f;
+    --green: #2fd36b;
+    --yellow: #ffc53d;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 18px; margin: 0; letter-spacing: .5px; }
+  header h1 span { color: var(--accent); }
+  .opts { display: flex; gap: 16px; align-items: center; font-size: 14px; color: var(--muted); }
+  .opts label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  select, button {
+    background: var(--panel); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  button:hover, select:hover { border-color: var(--accent); }
+  main { flex: 1; display: grid; grid-template-columns: 1fr 320px; min-height: 0; }
+  #stage {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px; min-width: 0; cursor: pointer; touch-action: none;
+  }
+  #scramble {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: clamp(16px, 2.6vw, 26px); line-height: 1.6; text-align: center;
+    max-width: 900px; margin-bottom: 4vh; min-height: 3.2em; letter-spacing: 1px;
+  }
+  #timer {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(64px, 17vw, 190px); font-weight: 600; line-height: 1;
+    transition: color .08s;
+  }
+  #timer.holding { color: var(--red); }
+  #timer.ready { color: var(--green); }
+  #timer.inspect { color: var(--yellow); }
+  #hint { color: var(--muted); margin-top: 3vh; font-size: 14px; text-align: center; min-height: 1.4em; }
+  #stats { display: flex; gap: 28px; margin-top: 4vh; color: var(--muted); font-size: 15px; flex-wrap: wrap; justify-content: center; }
+  #stats b { color: var(--text); font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; margin-left: 4px; }
+  aside { border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+  aside .top { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  aside h2 { margin: 0; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  #list { flex: 1; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+  #list li {
+    display: grid; grid-template-columns: 36px 1fr auto; gap: 8px; align-items: center;
+    padding: 8px 16px; border-bottom: 1px solid var(--line); font-size: 14px; cursor: pointer;
+  }
+  #list li:hover { background: #242830; }
+  #list .n { color: var(--muted); }
+  #list .t { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  #list .tag { color: var(--yellow); font-size: 12px; margin-left: 6px; }
+  #list .empty { color: var(--muted); display: block; text-align: center; padding: 30px 16px; cursor: default; }
+  #list .empty:hover { background: none; }
+  #list .pb { color: var(--green); font-size: 11px; }
+  .modal-back {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none;
+    align-items: center; justify-content: center; z-index: 10; padding: 16px;
+  }
+  .modal-back.show { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; width: min(480px, 100%); }
+  .modal .big { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 40px; font-weight: 600; }
+  .modal .scr { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--muted); font-size: 13px; line-height: 1.6; margin: 10px 0 16px; word-break: break-word; }
+  .modal .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; grid-template-rows: 1fr 220px; }
+    aside { border-left: 0; border-top: 1px solid var(--line); }
+    header { padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧊 Cube <span>Timer</span></h1>
+  <div class="opts">
+    <label><input type="checkbox" id="inspToggle"> 15s inspection</label>
+    <select id="sizeSel" title="Puzzle">
+      <option value="2">2×2</option>
+      <option value="3" selected>3×3</option>
+      <option value="4">4×4</option>
+    </select>
+    <button id="newScr">New scramble</button>
+  </div>
+</header>
+
+<main>
+  <section id="stage">
+    <div id="scramble"></div>
+    <div id="timer">0.00</div>
+    <div id="hint">Hold <b>Space</b> until it turns green, release to start. Any key stops.</div>
+    <div id="stats">
+      <span>Best<b id="sBest">–</b></span>
+      <span>Mo3<b id="sMo3">–</b></span>
+      <span>Ao5<b id="sAo5">–</b></span>
+      <span>Ao12<b id="sAo12">–</b></span>
+      <span>Mean<b id="sMean">–</b></span>
+    </div>
+  </section>
+  <aside>
+    <div class="top">
+      <h2>Solves <span id="count"></span></h2>
+      <div><button id="undo" title="Remove last solve">Delete last</button> <button id="clear">Clear all</button></div>
+    </div>
+    <ul id="list"></ul>
+  </aside>
+</main>
+
+<div class="modal-back" id="modalBack">
+  <div class="modal">
+    <div class="big" id="mTime"></div>
+    <div class="scr" id="mScr"></div>
+    <div class="row">
+      <button id="mPlus2">+2</button>
+      <button id="mDnf">DNF</button>
+      <button id="mOk">No penalty</button>
+      <button id="mDel">Delete</button>
+      <button id="mClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const timerEl = $("timer"), hintEl = $("hint"), scrEl = $("scramble");
+  const HOLD_MS = 300;
+  const STORE = "cubeTimer.v1";
+
+  // ---------- state ----------
+  let solves = [];
+  let size = "3";
+  let inspectionOn = false;
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE) || "{}");
+    solves = Array.isArray(d.solves) ? d.solves : [];
+    size = d.size || "3";
+    inspectionOn = !!d.inspection;
+  } catch (e) {}
+  $("sizeSel").value = size;
+  $("inspToggle").checked = inspectionOn;
+
+  const save = () => { try { localStorage.setItem(STORE, JSON.stringify({ solves, size, inspection: inspectionOn })); } catch (e) {} };
+
+  // ---------- scramble ----------
+  const AXES = [["U", "D"], ["L", "R"], ["F", "B"]];
+  function makeScramble(n) {
+    const len = { 2: 11, 3: 20, 4: 40 }[n];
+    const mods = ["", "'", "2"];
+    const out = [];
+    let lastAxis = -1, prevAxis = -1, usedOnAxis = [];
+    const faces = AXES.map(a => a.slice());
+    // 4x4 also uses wide moves (Uw, Dw ...) on top of the basic faces
+    for (let i = 0; i < len; i++) {
+      let axis;
+      do { axis = Math.floor(Math.random() * 3); } while (axis === lastAxis && usedOnAxis.length >= 2);
+      if (axis !== lastAxis) usedOnAxis = [];
+      let face;
+      do { face = faces[axis][Math.floor(Math.random() * 2)]; } while (usedOnAxis.includes(face));
+      usedOnAxis.push(face);
+      lastAxis = axis;
+      let move = face;
+      if (n === "4" && Math.random() < 0.4) move += "w";
+      if (n === "2" && (face === "L" || face === "D" || face === "B")) {
+        // 2x2 only needs U, R, F
+        move = { L: "R", D: "U", B: "F" }[face];
+      }
+      out.push(move + mods[Math.floor(Math.random() * 3)]);
+    }
+    return out.join(" ");
+  }
+  let scramble = "";
+  function newScramble() { scramble = makeScramble(size); scrEl.textContent = scramble; }
+
+  // ---------- formatting / stats ----------
+  const eff = s => s.penalty === "DNF" ? Infinity : s.time + (s.penalty || 0);
+  function fmt(ms, dec = 2) {
+    if (ms === Infinity || ms == null) return "DNF";
+    const total = ms / 1000;
+    const m = Math.floor(total / 60);
+    const s = total - m * 60;
+    return m ? `${m}:${s.toFixed(dec).padStart(dec + 3, "0")}` : s.toFixed(dec);
+  }
+  function fmtSolve(s) {
+    if (s.penalty === "DNF") return "DNF";
+    return fmt(eff(s)) + (s.penalty === 2000 ? "+" : "");
+  }
+  function avgOf(n, end = solves.length) {
+    if (end < n) return null;
+    const slice = solves.slice(end - n, end).map(eff).sort((a, b) => a - b);
+    const trim = n >= 5 ? Math.ceil(n * 0.05) : 0;
+    const kept = slice.slice(trim, n - trim);
+    if (kept.some(x => x === Infinity)) return Infinity;
+    return kept.reduce((a, b) => a + b, 0) / kept.length;
+  }
+  function renderStats() {
+    const valid = solves.map(eff).filter(x => x !== Infinity);
+    $("sBest").textContent = valid.length ? fmt(Math.min(...valid)) : "–";
+    $("sMean").textContent = valid.length ? fmt(valid.reduce((a, b) => a + b, 0) / valid.length) : "–";
+    const set = (id, v) => $(id).textContent = v == null ? "–" : fmt(v);
+    set("sMo3", avgOf(3)); set("sAo5", avgOf(5)); set("sAo12", avgOf(12));
+  }
+  function renderList() {
+    const ul = $("list");
+    ul.innerHTML = "";
+    $("count").textContent = solves.length ? `(${solves.length})` : "";
+    if (!solves.length) {
+      const li = document.createElement("li");
+      li.className = "empty"; li.textContent = "No solves yet. Go set a time!";
+      ul.appendChild(li); return;
+    }
+    const best = Math.min(...solves.map(eff));
+    for (let i = solves.length - 1; i >= 0; i--) {
+      const s = solves[i];
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="n">${i + 1}</span><span class="t"></span><span class="pb"></span>`;
+      li.children[1].textContent = fmtSolve(s);
+      if (eff(s) === best && best !== Infinity) li.children[2].textContent = "★ best";
+      li.onclick = () => openModal(i);
+      ul.appendChild(li);
+    }
+  }
+  function renderAll() { renderStats(); renderList(); save(); }
+
+  // ---------- timer state machine ----------
+  // idle -> (inspecting) -> holding -> ready -> running -> idle
+  let state = "idle";
+  let startAt = 0, raf = 0, holdTimeout = 0;
+  let inspStart = 0, inspTick = 0, inspPenalty = 0, inspecting = false;
+  let suppressRelease = false;
+
+  function setState(s) {
+    state = s;
+    timerEl.classList.toggle("holding", s === "holding");
+    timerEl.classList.toggle("ready", s === "ready");
+    timerEl.classList.toggle("inspect", inspecting && s !== "holding" && s !== "ready");
+  }
+
+  function press(viaSpaceOrPointer = true) {
+    if (state === "running") { stop(); suppressRelease = viaSpaceOrPointer; return; }
+    if (state === "idle" || state === "inspect") {
+      setState("holding");
+      holdTimeout = setTimeout(() => { if (state === "holding") setState("ready"); }, HOLD_MS);
+    }
+  }
+  function release() {
+    if (suppressRelease) { suppressRelease = false; return; }
+    clearTimeout(holdTimeout);
+    if (state === "ready") {
+      if (inspecting) endInspection();
+      start();
+    } else if (state === "holding") {
+      if (inspectionOn && !inspecting) { beginInspection(); }
+      else setState(inspecting ? "inspect" : "idle");
+    }
+  }
+
+  function beginInspection() {
+    inspecting = true; inspStart = performance.now(); inspPenalty = 0;
+    setState("inspect");
+    hintEl.textContent = "Inspecting… hold Space and release to start the solve.";
+    const tick = () => {
+      if (!inspecting) return;
+      const e = (performance.now() - inspStart) / 1000;
+      if (e < 15) timerEl.textContent = String(Math.ceil(15 - e));
+      else if (e < 17) { timerEl.textContent = "+2"; inspPenalty = 2000; }
+      else { timerEl.textContent = "DNF"; inspPenalty = "DNF"; }
+      inspTick = requestAnimationFrame(tick);
+    };
+    tick();
+  }
+  function endInspection() {
+    inspecting = false;
+    cancelAnimationFrame(inspTick);
+    const e = (performance.now() - inspStart) / 1000;
+    inspPenalty = e >= 17 ? "DNF" : e >= 15 ? 2000 : 0;
+  }
+
+  function start() {
+    startAt = performance.now();
+    setState("running");
+    hintEl.textContent = "Solving… press any key / tap to stop.";
+    const loop = () => {
+      timerEl.textContent = fmt(performance.now() - startAt, 2);
+      raf = requestAnimationFrame(loop);
+    };
+    loop();
+  }
+  function stop() {
+    cancelAnimationFrame(raf);
+    const time = performance.now() - startAt;
+    setState("idle");
+    const s = { time: Math.round(time / 10) * 10, penalty: inspPenalty || 0, scramble, size, date: Date.now() };
+    inspPenalty = 0;
+    solves.push(s);
+    timerEl.textContent = fmtSolve(s);
+    hintEl.textContent = "Hold Space until it turns green, release to start. Any key stops.";
+    newScramble();
+    renderAll();
+  }
+
+  // ---------- input ----------
+  const modalOpen = () => $("modalBack").classList.contains("show");
+  document.addEventListener("keydown", e => {
+    if (modalOpen()) { if (e.key === "Escape") closeModal(); return; }
+    if (["INPUT", "SELECT", "BUTTON"].includes(e.target.tagName) && e.code === "Space") { e.preventDefault(); }
+    if (e.repeat) return;
+    if (state === "running") { e.preventDefault(); press(e.code === "Space"); return; }
+    if (e.code === "Space") { e.preventDefault(); press(); }
+    else if (e.key === "Escape" && inspecting) {
+      inspecting = false; cancelAnimationFrame(inspTick); setState("idle");
+      timerEl.textContent = "0.00";
+    }
+  });
+  document.addEventListener("keyup", e => {
+    if (modalOpen()) return;
+    if (e.code === "Space") { e.preventDefault(); release(); }
+  });
+  const stage = $("stage");
+  stage.addEventListener("pointerdown", e => { e.preventDefault(); press(); });
+  stage.addEventListener("pointerup", () => release());
+  stage.addEventListener("pointercancel", () => { clearTimeout(holdTimeout); if (state === "holding") setState(inspecting ? "inspect" : "idle"); });
+
+  // ---------- controls ----------
+  // blur controls after use so Space doesn't re-trigger them
+  const blurAfter = el => el.addEventListener("click", () => el.blur());
+  ["newScr", "undo", "clear"].forEach(id => blurAfter($(id)));
+  $("newScr").onclick = newScramble;
+  $("sizeSel").onchange = e => { size = e.target.value; e.target.blur(); newScramble(); save(); };
+  $("inspToggle").onchange = e => { inspectionOn = e.target.checked; e.target.blur(); save(); };
+  $("undo").onclick = () => { if (solves.length) { solves.pop(); timerEl.textContent = "0.00"; renderAll(); } };
+  $("clear").onclick = () => {
+    if (solves.length && confirm("Delete all solves?")) { solves = []; timerEl.textContent = "0.00"; renderAll(); }
+  };
+
+  // ---------- solve modal ----------
+  let editing = -1;
+  function openModal(i) {
+    editing = i;
+    const s = solves[i];
+    $("mTime").textContent = fmtSolve(s);
+    $("mScr").textContent = `#${i + 1} · ${s.size || 3}×${s.size || 3} · ${s.scramble || ""}`;
+    $("modalBack").classList.add("show");
+  }
+  function closeModal() { $("modalBack").classList.remove("show"); editing = -1; }
+  const setPen = p => { if (editing >= 0) { solves[editing].penalty = p; renderAll(); openModal(editing); } };
+  $("mPlus2").onclick = () => setPen(2000);
+  $("mDnf").onclick = () => setPen("DNF");
+  $("mOk").onclick = () => setPen(0);
+  $("mDel").onclick = () => { if (editing >= 0) { solves.splice(editing, 1); closeModal(); renderAll(); } };
+  $("mClose").onclick = closeModal;
+  $("modalBack").addEventListener("click", e => { if (e.target.id === "modalBack") closeModal(); });
+
+  // ---------- init ----------
+  newScramble();
+  renderAll();
+  if (solves.length) timerEl.textContent = fmtSolve(solves[solves.length - 1]);
+})();
+</script>
+</body>
+</html>
